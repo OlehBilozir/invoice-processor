@@ -1,0 +1,6 @@
+env
+.idea
+**/*.pyc
+*.xlsx
+*.csv
+config.ini
