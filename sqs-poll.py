@@ -21,7 +21,7 @@ while True:
         logger(file_name)
         (facility_pharmacy_map, invoice_reader_settings, data) = invoice_process.validate_file(file_name)
         if not data:
-        	raise exception("The file is invalid.")
+            raise exception("The file is invalid.")
 
         res = process_invoice(facility_pharmacy_map, invoice_reader_settings, data)
 

@@ -11,8 +11,7 @@ from email.mime.multipart import MIMEMultipart
 
 import boto3
 
-from sqlalchemy.engine import url as sa_url
-from sqlalchemy import create_engine
+from models import *
 
 
 def get_s3_config():
@@ -57,17 +56,6 @@ def get_ses_client():
         aws_secret_access_key=s3_config['secret_access_key']
     )
 
-
-def get_db_connection():
-    # get Redshift configuration values from file
-    cnxn = pyodbc.connect("Driver={SQL Server Native Client 11.0};"
-                          "Server=LocalHost;"
-                          "Database=Omerus;"
-                          "Trusted_Connection=yes;")
-    cursor = cnxn.cursor()
-    return cursor
-    cursor.close()
-    cnxn.close()
 
 def parse_date(val):
     if val is None:
@@ -129,8 +117,18 @@ def send_email(subject, from_email, to_emails, body, attachment=None):
     return resp
 
 
-def get_pharmacy(file_name):
-    return file_name
+def get_facility(file_name):
+    facility_name = 'Deer Meadows NEW'
+    facility = session.query(Facility).filter(Facility.facility_nm==facility_name).first()
+
+    return facility
+
+
+def get_pharmacy(facility):
+    pharmcy_map = session.query(FacilityPharmacyMap).filter(FacilityPharmacyMap.facility_id==facility.id).first()
+    print (pharmcy_map.id, pharmcy_map.pharmacy.pharmacy_nm, '='*10)
+
+    return pharmcy_map
 
 
 def get_payer_group(cursor, pharmacy_id, source):

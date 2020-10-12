@@ -3,7 +3,7 @@ from openpyxl import load_workbook
 from utilities import *
 
 
-def validate_file(invoice_path)
+def validate_file(invoice_path):
     facility = get_facility(invoice_path)
     pharmacy, facility_pharmacy_map = get_pharmacy(facility)
     invoice_reader_settings = get_reader_settings(facility_pharmacy_map)
@@ -57,46 +57,6 @@ def process_invoice(facility_pharmacy_map, invoice_reader_settings, invoice_data
     result = []
     for row in invoice_data:
         record = process_invoice_func(row)
-        result.append(record)
-
-    sql = '''
-        INSERT INTO [Ancillary_data_warehouse].[dbo].[pharmacy_invoices](
-            [invoice_batch_id],
-            [pharmacy_id],
-            [facility_id],
-            [payer_group_id],
-            [invoice_dt],
-            [first_nm],
-            [last_nm],
-            [ssn],
-            [dob],
-            [gender],
-            [dispense_dt],
-            [product_category],
-            [drug_nm],
-            [doctor],
-            [rx_nbr],
-            [ndc],
-            [reject_cd],
-            [quantity],
-            [days_supplied],
-            [charge_amt],
-            [copay_amt],
-            [copay_flg],
-            [census_match_cd],
-            [status_cd],
-            [charge_confirmed_flg],
-            [duplicate_flg],
-            [note],
-            [request_credit_flg],
-            [credit_request_dt],
-            [credit_request_cd],
-            [days_overbilled],
-        ) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    '''
-    # bulk insert
-    cursor.executemany(sql, result)
-    cursor.commit()
     
     res = stop_batch_logging(invoice_batch_log_id)
 
@@ -142,4 +102,50 @@ def _process_row_speciality_rx(row):
         'days_overbilled': None,
     }
 
-    return record
+    pharmacy_invoice = PharmacyInvoice(**record)
+    session.add(pharmacy_invoice)
+    session.commit()
+
+
+def _process_row_pharmscripts(row):
+    first_nm = get_first_name(row['patient'])
+    last_nm = get_last_name(row['patient'])
+    ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'][0] != '_' else 0
+
+    record = {
+        'invoice_batch_id': invoice_batch_log_id,
+        'pharmacy_id': pharmacy_id,
+        'facility_id': facility_id,
+        'payer_group_id': payer_group_id,
+        'invoice_dt': invoice_dt,
+        'first_nm': first_nm,
+        'last_nm': last_nm,
+        'ssn': ssn,
+        'dob': None,
+        'gender': None,
+        'dispense_dt': row['dispdt'],
+        'product_category': row['rx_otc'],
+        'drug_nm': row['drug'],
+        'doctor': None,
+        'rx_nbr': row['rx_no'],
+        'ndc': row['ndc'],
+        'reject_cd': None,
+        'quantity': row['qty'],
+        'days_supplied': row['ds'],
+        'charge_amt': row['billamt'],
+        'copay_amt': None,
+        'copay_flg': 'Y' if row['copay'].upper() == 'COPAY' else None,
+        'census_match_cd': None,
+        'status_cd': None,
+        'charge_confirmed_flg': None,
+        'duplicate_flg': None,
+        'note': row['comment'],
+        'request_credit_flg': None,
+        'credit_request_dt': None,
+        'credit_request_cd': None,
+        'days_overbilled': None,
+    }
+
+    pharmacy_invoice = PharmacyInvoice(**record)
+    session.add(pharmacy_invoice)
+    session.commit()

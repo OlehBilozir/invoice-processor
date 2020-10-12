@@ -1,13 +1,9 @@
 version: '3.7'
 services:
   server:
-    container_name: ancillary-recon
     build:
       context: .
       dockerfile: Dockerfile
+    command: python ./validate.py boyd-invoice.xlsx
     volumes:
       - .:/app
-    ports:
-      - "8000:8000"
-    environment:
-      - PORT=8000      
