@@ -5,39 +5,38 @@ from utilities import *
 
 def validate_file(invoice_path):
     facility = get_facility(invoice_path)
-    pharmacy, facility_pharmacy_map = get_pharmacy(facility)
-    invoice_reader_settings = get_reader_settings(facility_pharmacy_map)
+    source = get_source(invoice_path)
+    facility_pharmacy_map = get_pharmacy(facility)
+    pharmacy = facility_pharmacy_map.pharmacy
+    invoice_reader_settings = get_reader_settings(pharmacy, source)
 
     if not invoice_reader_settings:
         raise exception("Reader setting is not available")
 
     # download invoice
-    invoice_path = get_s3_client().download_file(get_s3_bucket(), invoice_path)
+    # invoice_path = get_s3_client().download_file(get_s3_bucket(), invoice_path)
 
-    source = 's3'
-    invoice_dt = datetime.now()
+    invoice_dt = datetime.datetime.now().date()
 
     # parse invoice
     wb = load_workbook(invoice_path)
-    sheet_name = wb[0]
-    if not invoice_reader_settings.sheet_name:
-        sheet_name = wb.column_names[invoice_reader_settings.sheet_name]
 
-    if not sheet_name:
-        raise exception(String.Format("Required Sheet '{0}' not found.", sheetName));
+    try:
+        sheet_name = invoice_reader_settings.sheet_name or wb.sheetnames[0]
 
-    ws = wb[sheet_name]
+        ws = wb[sheet_name]
+    except Exception as e:
+        raise exception(f"Required Sheet '{sheetName}' not found.");
+
     # get meta info from [pharmacy_invoice_reader_settings]
     start_index = invoice_reader_settings.header_row_index + invoice_reader_settings.skip_rows_after_header + 1
-    size = ws.rows - invoice_reader_settings.skip_ending_rows
-
-    nrows = get_valid_rows_count(ws)
+    nrows = get_valid_rows_count(ws) - invoice_reader_settings.skip_ending_rows
 
     data = []
     # validate each row using field validator
     for row in range(1, nrows):
         # country = sheet.cell(row+1, col).value
-        if is_valid(row):
+        if is_valid_row(row):
             data.append(row)
 
     if nrows != len(data):

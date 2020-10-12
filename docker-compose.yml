@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python ./validate.py boyd-invoice.xlsx
+    # command: python ./validate.py boyd-invoice.xlsx
+    command: tail -f /dev/null
     volumes:
       - .:/app

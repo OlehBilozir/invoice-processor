@@ -124,15 +124,31 @@ def get_facility(file_name):
     return facility
 
 
+def get_source(file_name):
+    source_name = 'Portal'
+    source = session.query(InvoiceSource).filter(InvoiceSource.source_nm==source_name).first()
+
+    return source
+
+
 def get_pharmacy(facility):
     pharmcy_map = session.query(FacilityPharmacyMap).filter(FacilityPharmacyMap.facility_id==facility.id).first()
-    print (pharmcy_map.id, pharmcy_map.pharmacy.pharmacy_nm, '='*10)
 
     return pharmcy_map
 
 
 def get_payer_group(cursor, pharmacy_id, source):
-    sql = "SELECT * FROM [Ancillary_data_warehouse].[dbo].[payer_groups] WHERE pharmacy_id=? and source=?"
-    res = cursor.execute(sql, (pharmacy_id, source)).fetchone()
+    pass
 
-    return res
+
+def get_reader_settings(pharmacy, source):
+    reader_settings = session.query(PharmacyInvoiceReaderSetting).filter(
+        PharmacyInvoiceReaderSetting.pharmacy_id==pharmacy.id,
+        PharmacyInvoiceReaderSetting.invoice_source_id==source.id).first()
+    print (reader_settings.id, '='*10)
+
+    return reader_settings
+
+
+def is_valid_row(row):
+    return True
