@@ -137,7 +137,7 @@ def get_pharmacy(facility):
     return pharmcy_map
 
 
-def get_payer_group(cursor, pharmacy_id, source):
+def get_payer_group(pharmacy_id, source):
     pass
 
 
@@ -145,10 +145,36 @@ def get_reader_settings(pharmacy, source):
     reader_settings = session.query(PharmacyInvoiceReaderSetting).filter(
         PharmacyInvoiceReaderSetting.pharmacy_id==pharmacy.id,
         PharmacyInvoiceReaderSetting.invoice_source_id==source.id).first()
-    print (reader_settings.id, '='*10)
 
     return reader_settings
 
 
-def is_valid_row(row):
+def validate_row(row):
+    # type list -> dict
+    # country = sheet.cell(row+1, col).value
     return True
+
+
+def start_batch_logging(facility_pharmacy_map, invoice_dt, source):
+    log = InvoiceBatchLog(facility_pharmacy_map_id=facility_pharmacy_map.id,
+                          invoice_dt=invoice_dt,
+                          status_cd=0,
+                          source=source.id)
+    session.add(log)
+    session.commit()
+
+    return log.id
+
+
+def stop_batch_logging(invoice_batch_log_id):
+    log = session.query(InvoiceBatchLog).get(invoice_batch_log_id)
+    log.status_cd = 1
+    session.commit()
+
+
+def get_first_name(name):
+    pass
+
+
+def get_last_name(name):
+    pass

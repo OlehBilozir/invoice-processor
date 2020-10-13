@@ -1,6 +1,6 @@
 import invoice_process
 
-from utilities import send_email, get_sqs_resource, get_pharmacy
+from utilities import send_email, get_sqs_resource
 
 
 QUEUE_NAME = 'ltc-ancillary-reconciliation.fifo'
@@ -23,7 +23,7 @@ while True:
         if not data:
             raise exception("The file is invalid.")
 
-        res = process_invoice(facility_pharmacy_map, invoice_reader_settings, data)
+        res = invoice_process.process_invoice(facility_pharmacy_map, invoice_reader_settings, data)
 
         subject = f'Invoice Processed ({pharmacy})'
         send_email(subject, from_email, to_emails, email_body, log_file)
