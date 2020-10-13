@@ -123,7 +123,7 @@ def get_pharmacy(facility):
 
 
 def get_payer_group(pharmacy_id, source):
-    pass
+    return 1
 
 
 def get_reader_settings(pharmacy, source):
@@ -227,8 +227,11 @@ def stop_batch_logging(invoice_batch_log_id):
 
 
 def get_first_name(name):
-    pass
+    first_name = name.split(',')[0].strip()
+    return first_name
 
 
 def get_last_name(name):
-    pass
+    if ',' in name:
+        last_name = name.split(',')[1].strip()
+        return last_name

@@ -120,10 +120,8 @@ def _process_row_speciality_rx(row):
 
 def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, payer_group_id, invoice_dt):
     for row in invoice_data:
-        import pdb; pdb.set_trace()
-        first_nm = get_first_name(row['patient'])
-        last_nm = get_last_name(row['patient'])
-        ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'][0] != '_' else 0
+        first_nm = get_first_name(row['patient_nm'])
+        last_nm = get_last_name(row['patient_nm'])
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
@@ -133,31 +131,33 @@ def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, f
             'invoice_dt': invoice_dt,
             'first_nm': first_nm,
             'last_nm': last_nm,
-            'ssn': ssn,
+            'ssn': row['ssn'],
             'dob': None,
-            'gender': None,
-            'dispense_dt': row['dispdt'],
-            'product_category': row['rx_otc'],
+            'gender': 'M' if row['b_or_g'] == 'B' else 'F' if row['b_or_g'] == 'G' else None,
+            'dispense_dt': row['disp_dt'],
+            'product_category': row['rx_type'],
             'drug_nm': row['drug'],
-            'doctor': None,
+            'doctor': row['physician'],
             'rx_nbr': row['rx_no'],
             'ndc': row['ndc'],
             'reject_cd': None,
             'quantity': row['qty'],
             'days_supplied': row['ds'],
-            'charge_amt': row['billamt'],
+            'charge_amt': row['bill'],
             'copay_amt': None,
-            'copay_flg': 'Y' if row['copay'].upper() == 'COPAY' else None,
+            'copay_flg': 'Y' if row['copay'].upper() == 'Y' else None,
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
             'duplicate_flg': None,
-            'note': row['comment'],
+            'note': row['billing_comment'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
             'days_overbilled': None,
+            'duplicate_flg': True
         }
+        import pdb; pdb.set_trace()
 
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
