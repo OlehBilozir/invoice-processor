@@ -1,3 +1,5 @@
+import datetime
+
 from openpyxl import load_workbook
 
 from utilities import *
@@ -32,14 +34,19 @@ def validate_file(invoice_path):
     start_index = invoice_reader_settings.header_row_index + invoice_reader_settings.skip_rows_after_header + 1
     nrows = get_valid_rows_count(ws) - invoice_reader_settings.skip_ending_rows
 
+    header = [ii.value for ii in ws[invoice_reader_settings.header_row_index+1]]
+
+    for field in invoice_reader_settings.raw_invoice_fields:
+        if field.sheet_column_name not in header and not field.is_optional:
+            raise Exception(f"Sheet Column '{field.sheet_column_name}' not found in invoice file")
+
     data = []
     # validate each row using field validator
-    for row in range(start_index, nrows):
-        cleaned_data = validate_row(row)
-        if cleaned_data:
-            data.append(cleaned_data)
-        else:
+    for row_idx in range(start_index, nrows):
+        cleaned_data = validate_row(invoice_reader_settings.raw_invoice_fields, header, ws[row_idx+1], row_idx+1)
+        if not cleaned_data:
             raise Exception("The file is invalid.")
+        data.append(cleaned_data)
 
     return facility_pharmacy_map, invoice_dt, source, data
 
@@ -113,6 +120,7 @@ def _process_row_speciality_rx(row):
 
 def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, payer_group_id, invoice_dt):
     for row in invoice_data:
+        import pdb; pdb.set_trace()
         first_nm = get_first_name(row['patient'])
         last_nm = get_last_name(row['patient'])
         ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'][0] != '_' else 0

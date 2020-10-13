@@ -1,15 +1,13 @@
-import os
-import sys
-import time
-import datetime
+import re
 import configparser
-import pyodbc
 
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 
 import boto3
+import pyodbc
+import dateparser
 
 from models import *
 
@@ -55,19 +53,6 @@ def get_ses_client():
         aws_access_key_id=s3_config['access_key_id'],
         aws_secret_access_key=s3_config['secret_access_key']
     )
-
-
-def parse_date(val):
-    if val is None:
-        return
-
-    if isinstance(val, datetime.datetime):
-        return val
-
-    try:
-        return datetime.datetime.strptime(val.split(' ')[0], '%m/%d/%Y')
-    except Exception as e:
-        pass
 
 
 def clean_text(val):
@@ -149,10 +134,79 @@ def get_reader_settings(pharmacy, source):
     return reader_settings
 
 
-def validate_row(row):
+def validate_field(field, val):
+    is_valid = True
+    msg = ''
+
+    if val:
+        if field.field_type in ['int', 'long']:
+            try:
+                _val = int(val)
+            except Exception as e:
+                msg = str(e) + '\n'
+                is_valid = False
+        elif field.field_type == 'char':
+            is_valid = len(val) == 1
+            msg = 'Invalid char'
+        elif field.field_type == 'decimal':
+            try:
+                _val = float(val.replace("$", "").replace("(", "").replace(")", ""))
+            except Exception as e:
+                is_valid = False
+                msg = str(e) + '\n'
+        elif field.field_type == 'date':
+            is_valid = dateparser.parse(val)
+            if not is_valid:
+                msg = f'{field.sheet_column_name} is invalid.'
+
+    if not is_valid or not field.field_validations:
+        return is_valid, msg
+
+    for rule in field.field_validations.split(','):
+        if rule == 'IsNotEmpty':
+            is_valid = val
+        elif rule == 'Ssn':
+            pat1 = re.compile("^\d{9}|\d{3}-\d{2}-\d{4}$|^$")
+            pat2 = re.compile("^___-__-____$|^$")
+            is_valid = pat1.match(val) or pat2.match(val)
+        elif rule == 'MorF':
+            is_valid = val.upper() in ['M', 'F']
+        elif rule == 'BorG':
+            is_valid = val.upper() in ['B', 'G']
+        elif rule == 'MaxLength50':
+            is_valid = len(val) < 50
+        elif rule == 'MaxLength150':
+            is_valid = len(val) < 150
+        elif rule == 'MaxLength500':
+            is_valid = len(val) < 500
+        elif rule == 'MaxLength1000':
+            is_valid = len(val) < 1000
+        elif rule == 'Name':
+            try:
+                first_name, last_name = val.split(',')
+                is_valid = len(first_name) < 25 and len(last_name) < 25
+            except Exception as e:
+                msg = str(e)
+                is_valid = False
+
+        if not is_valid:
+            return is_valid, msg
+
+    return is_valid, msg
+
+
+def validate_row(invoice_fields, header, row, row_idx):
     # type list -> dict
-    # country = sheet.cell(row+1, col).value
-    return True
+    _row = {}
+    for field in invoice_fields:
+        idx = header.index(field.sheet_column_name)
+        val = clean_text(row[idx].value)
+        is_valid, msg = validate_field(field, val)
+        if not is_valid:
+            raise Exception(f'Column ({field.sheet_column_name}), Row ({row_idx}): '+msg)
+        _row[field.field_name] = val
+
+    return _row
 
 
 def start_batch_logging(facility_pharmacy_map, invoice_dt, source):
