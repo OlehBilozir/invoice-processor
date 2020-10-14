@@ -57,7 +57,6 @@ def process_invoice(facility_pharmacy_map, invoice_dt, source, invoice_data):
     pharmacy_name = facility_pharmacy_map.pharmacy.pharmacy_nm.lower().replace(' ', '_')
     pharmacy_id = facility_pharmacy_map.pharmacy.id
     facility_id = facility_pharmacy_map.facility.id
-    payer_group_id = get_payer_group(pharmacy_id, source)
     process_invoice_func = globals().get(f'_process_row_{pharmacy_name}')
 
     process_invoice_func(
@@ -65,8 +64,8 @@ def process_invoice(facility_pharmacy_map, invoice_dt, source, invoice_data):
         invoice_batch_log_id,
         pharmacy_id,
         facility_id,
-        payer_group_id,
-        invoice_dt
+        invoice_dt,
+        source
     )
     
     res = stop_batch_logging(invoice_batch_log_id)
@@ -118,10 +117,11 @@ def _process_row_speciality_rx(row):
     session.commit()
 
 
-def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, payer_group_id, invoice_dt):
+def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
     for row in invoice_data:
         first_nm = get_first_name(row['patient_nm'])
         last_nm = get_last_name(row['patient_nm'])
+        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source.id)
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
@@ -157,7 +157,6 @@ def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, f
             'days_overbilled': None,
             'duplicate_flg': True
         }
-        import pdb; pdb.set_trace()
 
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)

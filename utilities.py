@@ -8,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 import boto3
 import pyodbc
 import dateparser
+from sqlalchemy import or_
 
 from models import *
 
@@ -122,8 +123,13 @@ def get_pharmacy(facility):
     return pharmcy_map
 
 
-def get_payer_group(pharmacy_id, source):
-    return 1
+def get_payer_group(pharmacy_id, inv_grp, source):
+    payer_group = session.query(PayerGroupPharmacyMap).filter(
+        PayerGroupPharmacyMap.pharmacy_id==pharmacy_id,
+        or_(PayerGroupPharmacyMap.source==None, PayerGroupPharmacyMap.source==source),
+        or_(PayerGroupPharmacyMap.name==None, PayerGroupPharmacyMap.name==inv_grp)).first()
+
+    return payer_group.id
 
 
 def get_reader_settings(pharmacy, source):
