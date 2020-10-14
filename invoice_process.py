@@ -73,48 +73,53 @@ def process_invoice(facility_pharmacy_map, invoice_dt, source, invoice_data):
     return res
 
 
-def _process_row_speciality_rx(row):
-    first_nm = get_first_name(row['patient'])
-    last_nm = get_last_name(row['patient'])
-    ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'][0] != '_' else 0
+def _process_row_speciality_rx(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+    for row in invoice_data:
+        first_nm = get_first_name(row['patient'])
+        last_nm = get_last_name(row['patient'])
+        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source.id)
+        ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'][0] != '_' else 0
 
-    record = {
-        'invoice_batch_id': invoice_batch_log_id,
-        'pharmacy_id': pharmacy_id,
-        'facility_id': facility_id,
-        'payer_group_id': payer_group_id,
-        'invoice_dt': invoice_dt,
-        'first_nm': first_nm,
-        'last_nm': last_nm,
-        'ssn': ssn,
-        'dob': None,
-        'gender': None,
-        'dispense_dt': row['dispdt'],
-        'product_category': row['rx_otc'],
-        'drug_nm': row['drug'],
-        'doctor': None,
-        'rx_nbr': row['rx_no'],
-        'ndc': row['ndc'],
-        'reject_cd': None,
-        'quantity': row['qty'],
-        'days_supplied': row['ds'],
-        'charge_amt': row['billamt'],
-        'copay_amt': None,
-        'copay_flg': 'Y' if row['copay'].upper() == 'COPAY' else None,
-        'census_match_cd': None,
-        'status_cd': None,
-        'charge_confirmed_flg': None,
-        'duplicate_flg': None,
-        'note': row['comment'],
-        'request_credit_flg': None,
-        'credit_request_dt': None,
-        'credit_request_cd': None,
-        'days_overbilled': None,
-    }
+        record = {
+            'invoice_batch_id': invoice_batch_log_id,
+            'pharmacy_id': pharmacy_id,
+            'facility_id': facility_id,
+            'payer_group_id': payer_group_id,
+            'invoice_dt': invoice_dt,
+            'first_nm': first_nm,
+            'last_nm': last_nm,
+            'ssn': ssn,
+            'dob': None,
+            'gender': None,
+            'dispense_dt': row['dispdt'],
+            'product_category': row['rx_otc'],
+            'drug_nm': row['drug'],
+            'doctor': None,
+            'rx_nbr': row['rx_no'],
+            'ndc': row['ndc'],
+            'reject_cd': None,
+            'quantity': row['qty'],
+            'days_supplied': row['ds'],
+            'charge_amt': row['billamt'],
+            'copay_amt': None,
+            'copay_flg': 'Y' if row['copay'].upper() == 'COPAY' else None,
+            'census_match_cd': None,
+            'status_cd': None,
+            'charge_confirmed_flg': None,
+            'duplicate_flg': None,
+            'note': row['comment'],
+            'request_credit_flg': None,
+            'credit_request_dt': None,
+            'credit_request_cd': None,
+            'days_overbilled': None,
+            'duplicate_flg': True
+        }
 
-    pharmacy_invoice = PharmacyInvoice(**record)
-    session.add(pharmacy_invoice)
-    session.commit()
+        pharmacy_invoice = PharmacyInvoice(**record)
+        session.add(pharmacy_invoice)
+        session.commit()
+
+    return len(invoice_data)
 
 
 def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
