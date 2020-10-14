@@ -39,7 +39,7 @@ def get_sqs_resource():
 
     return boto3.resource(
         'sqs',
-        region_name='us-west-2',
+        region_name='us-east-1',
         aws_access_key_id=s3_config['access_key_id'],
         aws_secret_access_key=s3_config['secret_access_key']
     )
@@ -104,14 +104,14 @@ def send_email(subject, from_email, to_emails, body, attachment=None):
 
 
 def get_facility(file_name):
-    facility_name = 'Deer Meadows NEW'
+    facility_name = file_name.split('/')[2]
     facility = session.query(Facility).filter(Facility.facility_nm==facility_name).first()
 
     return facility
 
 
 def get_source(file_name):
-    source_name = 'Portal'
+    source_name = file_name.split('/')[3]
     source = session.query(InvoiceSource).filter(InvoiceSource.source_nm==source_name).first()
 
     return source

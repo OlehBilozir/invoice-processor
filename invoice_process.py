@@ -16,12 +16,13 @@ def validate_file(invoice_path):
         raise Exception("Reader setting is not available")
 
     # download invoice
-    # invoice_path = get_s3_client().download_file(get_s3_bucket(), invoice_path)
+    file_name = 'invoice.xlsx'
+    invoice_path = get_s3_client().download_file(get_s3_bucket(), invoice_path, file_name)
 
     invoice_dt = datetime.datetime.now().date()
 
     # parse invoice
-    wb = load_workbook(invoice_path)
+    wb = load_workbook(file_name)
 
     try:
         sheet_name = invoice_reader_settings.sheet_name or wb.sheetnames[0]
@@ -162,7 +163,7 @@ def _process_row_pharmscripts(invoice_data, invoice_batch_log_id, pharmacy_id, f
             'days_overbilled': None,
             'duplicate_flg': True
         }
-
+        import pdb; pdb.set_trace()
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()

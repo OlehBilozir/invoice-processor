@@ -14,16 +14,15 @@ to_emails = 'jason.5001001@gmail.com'
 
 while True:
     for message in queue.receive_messages(MaxNumberOfMessages=MAX_QUEUE_MESSAGES, WaitTimeSeconds=5):
-        file_name = message.body
+        file_name = message.body.replace('+', ' ')
         print (file_name, '='*10)
         message.delete()
 
-        logger(file_name)
-        (facility_pharmacy_map, invoice_reader_settings, data) = invoice_process.validate_file(file_name)
+        (facility_pharmacy_map, invoice_dt, source, data) = invoice_process.validate_file(file_name)
         if not data:
             raise exception("The file is invalid.")
 
-        res = invoice_process.process_invoice(facility_pharmacy_map, invoice_reader_settings, data)
+        res = invoice_process.process_invoice(facility_pharmacy_map, invoice_dt, source, data)
 
         subject = f'Invoice Processed ({pharmacy})'
-        send_email(subject, from_email, to_emails, email_body, log_file)
+        # send_email(subject, from_email, to_emails, email_body, log_file)
