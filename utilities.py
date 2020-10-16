@@ -133,9 +133,10 @@ def get_payer_group(pharmacy_id, inv_grp, source):
 
 
 def get_reader_settings(pharmacy, source):
+    source_id = source.id if source else 0
     reader_settings = session.query(PharmacyInvoiceReaderSetting).filter(
         PharmacyInvoiceReaderSetting.pharmacy_id==pharmacy.id,
-        PharmacyInvoiceReaderSetting.invoice_source_id==source.id).first()
+        PharmacyInvoiceReaderSetting.invoice_source_id==source_id).first()
 
     return reader_settings
 
@@ -215,11 +216,11 @@ def validate_row(invoice_fields, header, row, row_idx):
     return _row
 
 
-def start_batch_logging(facility_pharmacy_map, invoice_dt, source):
+def start_batch_logging(facility_pharmacy_map, invoice_dt, source_id):
     log = InvoiceBatchLog(facility_pharmacy_map_id=facility_pharmacy_map.id,
                           invoice_dt=invoice_dt,
                           status_cd=0,
-                          source=source.id)
+                          source=source_id)
     session.add(log)
     session.commit()
 
