@@ -10,3 +10,4 @@ urllib3==1.25.8
 pyodbc==4.0.30
 sqlacodegen==2.3.0
 dateparser
+pytest

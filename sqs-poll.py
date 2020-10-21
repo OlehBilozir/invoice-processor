@@ -10,7 +10,7 @@ sqs = get_sqs_resource()
 queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
 
 from_email = 'LTC <don@audienz.com>'
-to_emails = 'jason.5001001@gmail.com'
+to_emails = 'don.5001001@gmail.com'
 
 while True:
     for message in queue.receive_messages(MaxNumberOfMessages=MAX_QUEUE_MESSAGES, WaitTimeSeconds=5):

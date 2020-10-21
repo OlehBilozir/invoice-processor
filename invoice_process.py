@@ -207,15 +207,14 @@ def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmac
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': True,
             'note': row['billing_comment'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
-        import pdb; pdb.set_trace()
+
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()
