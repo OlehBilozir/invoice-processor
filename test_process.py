@@ -154,14 +154,14 @@ def test_validate_field_string_Name():
     assert is_valid == True
 
 
-def test_pharmscripts_portal():
-    file_name = '2020/October/Deer Meadows NEW/Portal/Boyd April Untouched Invoice.xlsx'
+# def test_pharmscripts_portal():
+#     file_name = '2020/October/Deer Meadows NEW/Portal/Boyd April Untouched Invoice.xlsx'
 
-    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
-    assert result == True
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
 
-    result = invoice_process.process_invoice(invoice_info, log_file, True)
-    assert result == True
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
 
 
 # def test_process_row_omnicare_general():
@@ -172,3 +172,13 @@ def test_pharmscripts_portal():
 
 #     result = invoice_process.process_invoice(invoice_info, log_file, True)
 #     assert result == True
+
+
+def test_pharmscripts_portal():
+    file_name = '2020/October/Deer Meadows NEW/Portal/Cartersville May Invoice.xlsx'
+
+    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+    assert result == True
+
+    result = invoice_process.process_invoice(invoice_info, log_file, True)
+    assert result == True
