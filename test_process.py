@@ -156,6 +156,17 @@ def test_validate_field_string_Name():
 
 # def test_pharmscripts_portal():
 #     file_name = '2020/October/Deer Meadows NEW/Portal/Boyd April Untouched Invoice.xlsx'
+#     file_name = '2020/October/Deer Meadows NEW/Portal/Pharmscripts Portal Invoice.xlsx'
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+
+# def test_pharmscripts_email():
+#     file_name = '2020/October/Deer Meadows NEW/Email/Pharmscripts Emailed Invoice.xlsx'
 
 #     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
 #     assert result == True
@@ -166,6 +177,7 @@ def test_validate_field_string_Name():
 
 # def test_process_row_omnicare_general():
 #     file_name = '2020/October/Beacon/General/Holland September Untouched Invoice.xlsx'
+#     file_name = '2020/October/Beacon/General/Omnicare Email.xlsx'
 
 #     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
 #     assert result == True
@@ -174,11 +186,51 @@ def test_validate_field_string_Name():
 #     assert result == True
 
 
-def test_pharmscripts_portal():
-    file_name = '2020/October/Deer Meadows NEW/Portal/Cartersville May Invoice.xlsx'
+def test_pharmerica_email():
+    file_name = '2020/October/Ridgewood/Email/Cartersville May Invoice.xlsx'
 
     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
     assert result == True
 
     result = invoice_process.process_invoice(invoice_info, log_file, True)
     assert result == True
+
+
+# def test_pharmerica_portal():
+#     file_name = '2020/October/Ridgewood/Portal/Pharmerica Portal Invoice.xlsx'
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+
+# def test_geriscript_general():
+#     file_name = '2020/October/Green Acres/General/Geriscript invoice.xlsx'
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+
+# def test_speciality_rx_email():
+#     file_name = '2020/October/Ashbrook/Email/Specialty Emailed Version.xlsx'
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+
+# def test_speciality_rx_portal():
+#     file_name = '2020/October/Ashbrook/Portal/Specialty Portal Invoice.xlsx'
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True

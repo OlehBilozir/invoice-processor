@@ -46,7 +46,8 @@ def validate_file(invoice_path, test_mode=False):
     # get meta info from [pharmacy_invoice_reader_settings]
     start_index = invoice_reader_settings.header_row_index + invoice_reader_settings.skip_rows_after_header + 1
     nrows = get_valid_rows_count(ws) - invoice_reader_settings.skip_ending_rows
-    header = [get_clean_header_column(ii.value) for ii in ws[invoice_reader_settings.header_row_index+1]]
+    # import pdb; pdb.set_trace()
+    header = [get_clean_header_column(ii.value) for ii in ws[invoice_reader_settings.header_row_index+1] if ii.value]
 
     for field in invoice_reader_settings.raw_invoice_fields:
         if field.sheet_column_name not in header and not field.is_optional:
