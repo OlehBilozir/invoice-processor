@@ -150,68 +150,88 @@ def validate_field(field, val):
             try:
                 _val = int(val)
             except Exception as e:
-                msg = str(e) + '\n'
+                msg = "Invalid number"
                 is_valid = False
         elif field.field_type == 'char':
             is_valid = len(val) == 1
-            msg = 'Invalid char'
+            if not is_valid:
+                msg = 'Invalid char'
         elif field.field_type == 'decimal':
             try:
                 _val = float(val.replace("$", "").replace("(", "").replace(")", ""))
             except Exception as e:
                 is_valid = False
-                msg = str(e) + '\n'
+                msg = "Invalid decimal"
         elif field.field_type == 'date':
             is_valid = dateparser.parse(val)
             if not is_valid:
-                msg = f'{field.sheet_column_name} is invalid.'
+                msg = "Invalid date"
 
-    if not is_valid or not field.field_validations:
-        return is_valid, msg
+    if field.field_validations:
+        for rule in field.field_validations.split(','):
+            _msg = ''
+            if not val:
+                if rule == 'IsNotEmpty':
+                    is_valid = False
+                    _msg = "Should not be empty"
+                continue
 
-    for rule in field.field_validations.split(','):
-        if rule == 'IsNotEmpty':
-            is_valid = val
-        elif rule == 'Ssn':
-            pat1 = re.compile("^\d{9}|\d{3}-\d{2}-\d{4}$|^$")
-            pat2 = re.compile("^___-__-____$|^$")
-            is_valid = pat1.match(val) or pat2.match(val)
-        elif rule == 'MorF':
-            is_valid = val.upper() in ['M', 'F']
-        elif rule == 'BorG':
-            is_valid = val.upper() in ['B', 'G']
-        elif rule == 'MaxLength50':
-            is_valid = len(val) < 50
-        elif rule == 'MaxLength150':
-            is_valid = len(val) < 150
-        elif rule == 'MaxLength500':
-            is_valid = len(val) < 500
-        elif rule == 'MaxLength1000':
-            is_valid = len(val) < 1000
-        elif rule == 'Name':
-            try:
-                first_name, last_name = val.split(',')
-                is_valid = len(first_name) < 25 and len(last_name) < 25
-            except Exception as e:
-                msg = str(e)
-                is_valid = False
+            if rule == 'Ssn':
+                pat1 = re.compile("^\d{9}|\d{3}-\d{2}-\d{4}$|^$")
+                pat2 = re.compile("^___-__-____$|^$")
+                is_valid = pat1.match(val) or pat2.match(val)
+                if not is_valid:
+                    _msg = "Invalid SSN"
+            elif rule == 'MorF':
+                is_valid = val.upper() in ['M', 'F']
+                if not is_valid:
+                    _msg = "Should be M or F"
+            elif rule == 'BorG':
+                is_valid = val.upper() in ['B', 'G']
+                if not is_valid:
+                    _msg = "Should be B or G"
+            elif rule == 'MaxLength50':
+                is_valid = len(val) < 50
+                if not is_valid:
+                    _msg = "Length should be less than 50"
+            elif rule == 'MaxLength150':
+                is_valid = len(val) < 150
+                if not is_valid:
+                    _msg = "Length should be less than 150"
+            elif rule == 'MaxLength500':
+                is_valid = len(val) < 500
+                if not is_valid:
+                    _msg = "Length should be less than 500"
+            elif rule == 'MaxLength1000':
+                is_valid = len(val) < 1000
+                if not is_valid:
+                    _msg = "Length should be less than 1000"
+            elif rule == 'Name':
+                try:
+                    first_name, last_name = val.split(',')
+                    is_valid = len(first_name) < 25 and len(last_name) < 25
+                except Exception as e:
+                    is_valid = False
+                    _msg = "Invalid name"
 
-        if not is_valid:
-            return is_valid, msg
+            if _msg:
+                msg = msg + ', ' + _msg if msg else _msg
 
     return is_valid, msg
 
 
-def validate_row(invoice_fields, header, row, row_idx):
+def validate_row(invoice_fields, header, row, row_idx, log_file):
     # type list -> dict
     _row = {}
     for field in invoice_fields:
-        idx = header.index(field.sheet_column_name)
-        val = clean_text(row[idx].value)
-        is_valid, msg = validate_field(field, val)
-        if not is_valid:
-            raise Exception(f'Column ({field.sheet_column_name}), Row ({row_idx}): '+msg)
-        _row[field.field_name] = val
+        if field.sheet_column_name in header:
+            idx = header.index(field.sheet_column_name)
+            val = clean_text(row[idx].value)
+            is_valid, msg = validate_field(field, val)
+            if is_valid:
+                _row[field.field_name] = val
+            else:
+                print("Row:", row_idx, "Column:", field.sheet_column_name, "Msg:", msg, file=log_file)
 
     return _row
 
@@ -242,3 +262,6 @@ def get_last_name(name):
     if ',' in name:
         last_name = name.split(',')[1].strip()
         return last_name
+
+def get_clean_header_column(text):
+    return ' '.join(re.findall('\S+', text))

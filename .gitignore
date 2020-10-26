@@ -2,5 +2,7 @@ env
 .idea
 **/*.pyc
 *.xlsx
+*.xls
 *.csv
+*.txt
 config.ini

@@ -1,3 +1,5 @@
+import invoice_process
+
 from utilities import *
 
 
@@ -150,3 +152,23 @@ def test_validate_field_string_Name():
     is_valid, msg = validate_field(field, val)
 
     assert is_valid == True
+
+
+# def test_pharmscripts_portal():
+#     file_name = '2020/October/Deer Meadows NEW/Portal/Boyd April Untouched Invoice.xlsx'
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+
+def test_process_row_omnicare_general():
+    file_name = '2020/October/Beacon/General/Holland September Untouched Invoice.xlsx'
+
+    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+    assert result == True
+
+    result = invoice_process.process_invoice(invoice_info, log_file, True)
+    assert result == True

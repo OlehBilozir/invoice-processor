@@ -6,7 +6,12 @@ from openpyxl import load_workbook
 from utilities import *
 
 
-def validate_file(invoice_path):
+def validate_file(invoice_path, test_mode=False):
+    log_file_path = datetime.datetime.now().strftime("logs/%Y%m%d-%H%M%S.txt")
+    log_file = open(log_file_path, "w")
+    result = True
+    print("File Path:", invoice_path, file=log_file)
+
     facility = get_facility(invoice_path)
     source = get_source(invoice_path)
     facility_pharmacy_map = get_pharmacy(facility)
@@ -14,11 +19,16 @@ def validate_file(invoice_path):
     invoice_reader_settings = get_reader_settings(pharmacy, source)
 
     if not invoice_reader_settings:
-        raise Exception("Reader setting is not available")
+        print("Reader setting is not available", file=log_file)
+        log_file.close()
+        return False, log_file_path, None
 
     # download invoice
-    file_name = 'invoice.xlsx'
-    invoice_path = get_s3_client().download_file(get_s3_bucket(), invoice_path, file_name)
+    if not test_mode:
+        file_name = 'invoice.xlsx'
+        invoice_path = get_s3_client().download_file(get_s3_bucket(), invoice_path, file_name)
+    else:
+        file_name = 'sample_invoices/' + invoice_path.split('/')[-1]
 
     invoice_dt = datetime.datetime.now().date()
 
@@ -27,33 +37,43 @@ def validate_file(invoice_path):
 
     try:
         sheet_name = invoice_reader_settings.sheet_name or wb.sheetnames[0]
-
         ws = wb[sheet_name]
     except Exception as e:
-        raise Exception(f"Required Sheet '{sheetName}' not found.");
+        print(f"Required sheet ('{sheetName}') not found.", file=log_file)
+        log_file.close()
+        return False, log_file_path, None
 
     # get meta info from [pharmacy_invoice_reader_settings]
     start_index = invoice_reader_settings.header_row_index + invoice_reader_settings.skip_rows_after_header + 1
     nrows = get_valid_rows_count(ws) - invoice_reader_settings.skip_ending_rows
-
-    header = [ii.value for ii in ws[invoice_reader_settings.header_row_index+1]]
+    header = [get_clean_header_column(ii.value) for ii in ws[invoice_reader_settings.header_row_index+1]]
 
     for field in invoice_reader_settings.raw_invoice_fields:
         if field.sheet_column_name not in header and not field.is_optional:
-            raise Exception(f"Sheet Column '{field.sheet_column_name}' not found in invoice file")
+            result = False
+            print(f"Sheet Column '{field.sheet_column_name}' not found in invoice file", file=log_file)
 
     data = []
     # validate each row using field validator
     for row_idx in range(start_index, nrows):
-        cleaned_data = validate_row(invoice_reader_settings.raw_invoice_fields, header, ws[row_idx+1], row_idx+1)
-        if not cleaned_data:
-            raise Exception("The file is invalid.")
-        data.append(cleaned_data)
+        cleaned_data = validate_row(invoice_reader_settings.raw_invoice_fields, header, ws[row_idx+1], row_idx+1, log_file)
+        if cleaned_data:
+            data.append(cleaned_data)
+        else:
+            result = False
 
-    return facility_pharmacy_map, invoice_dt, source, data
+    invoice_info = (facility_pharmacy_map, invoice_dt, source, data)
+    log_file.close()
+
+    return result, log_file_path, invoice_info
 
 
-def process_invoice(facility_pharmacy_map, invoice_dt, source, invoice_data):
+def process_invoice(invoice_info, log_path, test_mode=False):
+    (facility_pharmacy_map, invoice_dt, source, invoice_data) = invoice_info
+    log_file = open(log_path, 'a')
+    result = True
+
+    print("Processing Invoice:", file=log_file)
     # create a log
     source_id = source.id if source else 0
     source_name = source.source_nm.lower() if source else 'general'
@@ -69,15 +89,18 @@ def process_invoice(facility_pharmacy_map, invoice_dt, source, invoice_data):
         pharmacy_id,
         facility_id,
         invoice_dt,
-        source_id
+        source_id,
+        log_file,
+        test_mode
     )
     
     res = stop_batch_logging(invoice_batch_log_id)
+    log_file.close()
 
-    return res
+    return result
 
 
-def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['patient'])
         last_nm = get_last_name(row['patient'])
@@ -110,13 +133,12 @@ def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmac
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': row['comment'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
 
         pharmacy_invoice = PharmacyInvoice(**record)
@@ -126,7 +148,7 @@ def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmac
     return len(invoice_data)
 
 
-def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['resident'])
         last_nm = get_last_name(row['resident'])
@@ -159,13 +181,12 @@ def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharma
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': row['billing_comment'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
 
         pharmacy_invoice = PharmacyInvoice(**record)
@@ -175,7 +196,7 @@ def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharma
     return len(invoice_data)
 
 
-def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['patient_nm'])
         last_nm = get_last_name(row['patient_nm'])
@@ -207,12 +228,11 @@ def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmac
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': True,
+            'duplicate_flg': test_mode,
             'note': row['billing_comment'],
             'request_credit_flg': None,
             'credit_request_dt': None,
-            'credit_request_cd': None,
-            'days_overbilled': None
+            'credit_request_cd': None
         }
 
         pharmacy_invoice = PharmacyInvoice(**record)
@@ -222,7 +242,7 @@ def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmac
     return len(invoice_data)
 
 
-def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['patient'])
         last_nm = get_last_name(row['patient'])
@@ -254,15 +274,14 @@ def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': None,
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
-        import pdb; pdb.set_trace()
+
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()
@@ -270,7 +289,7 @@ def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy
     return len(invoice_data)
 
 
-def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['full_nm'])
         last_nm = get_last_name(row['full_nm'])
@@ -303,15 +322,14 @@ def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': row['billing_comment'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
-        import pdb; pdb.set_trace()
+
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()
@@ -319,7 +337,7 @@ def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy
     return len(invoice_data)
 
 
-def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['name'])
         last_nm = get_last_name(row['name'])
@@ -351,15 +369,14 @@ def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id,
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': row['billing_comment'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
-        import pdb; pdb.set_trace()
+
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()
@@ -367,13 +384,13 @@ def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id,
     return len(invoice_data)
 
 
-def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = row['patient_first_nm']
         last_nm = row['patient_last_nm']
-        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
-        ssn = row['patient_ssn'][:3]+row['patient_ssn'][4:6]+row['patient_ssn'][7:11] if row['patient_ssn'][0] != '_' else ''
-
+        payer_group_id = get_payer_group(pharmacy_id, row['pay_type_description'], None)
+        ssn = row['patient_ssn'][:3]+row['patient_ssn'][4:6]+row['patient_ssn'][7:11] if row['patient_ssn'] and row['patient_ssn'][0] != '_' else ''
+        # import pdb;pdb.set_trace()
         record = {
             'invoice_batch_id': invoice_batch_log_id,
             'pharmacy_id': pharmacy_id,
@@ -395,20 +412,19 @@ def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_i
             'quantity': row['qty'],
             'days_supplied': row['days_supply'],
             'charge_amt': row['amount'],
-            'copay_amt': row['amount'] if row['copay'].upper() == 'COPAY' else None,
-            'copay_flg': 'Y' if row['copay'].upper() == 'COPAY' else None,
+            'copay_amt': row['amount'] if row['copay'] == 'copay' else None,
+            'copay_flg': 'Y' if row['copay'] == 'copay' else None,
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': row['statement_note'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
-        import pdb; pdb.set_trace()
+
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()
@@ -416,7 +432,7 @@ def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_i
     return len(invoice_data)
 
 
-def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['resident_nm'])
         last_nm = get_last_name(row['resident_nm'])
@@ -449,15 +465,14 @@ def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_i
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': row['task_manager_notes'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
-        import pdb; pdb.set_trace()
+
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()
@@ -465,7 +480,7 @@ def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_i
     return len(invoice_data)
 
 
-def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source):
+def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     for row in invoice_data:
         first_nm = get_first_name(row['resident_nm'])
         last_nm = get_last_name(row['resident_nm'])
@@ -498,15 +513,14 @@ def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_
             'census_match_cd': None,
             'status_cd': None,
             'charge_confirmed_flg': None,
-            'duplicate_flg': None,
+            'duplicate_flg': test_mode,
             'note': row['task_manager_notes'],
             'request_credit_flg': None,
             'credit_request_dt': None,
             'credit_request_cd': None,
-            'days_overbilled': None,
-            'duplicate_flg': True
+            'days_overbilled': None
         }
-        import pdb; pdb.set_trace()
+
         pharmacy_invoice = PharmacyInvoice(**record)
         session.add(pharmacy_invoice)
         session.commit()
