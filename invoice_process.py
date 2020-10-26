@@ -10,7 +10,7 @@ def validate_file(invoice_path, test_mode=False):
     log_file_path = datetime.datetime.now().strftime("logs/%Y%m%d-%H%M%S.txt")
     log_file = open(log_file_path, "w")
     result = True
-    print("File Path:", invoice_path, file=log_file)
+    print("File Path:", invoice_path, '\n', file=log_file)
 
     facility = get_facility(invoice_path)
     source = get_source(invoice_path)
@@ -52,7 +52,7 @@ def validate_file(invoice_path, test_mode=False):
     for field in invoice_reader_settings.raw_invoice_fields:
         if field.sheet_column_name not in header and not field.is_optional:
             result = False
-            print(f"Sheet Column '{field.sheet_column_name}' not found in invoice file", file=log_file)
+            print(f"Column '{field.sheet_column_name}' not found", file=log_file)
 
     data = []
     # validate each row using field validator
