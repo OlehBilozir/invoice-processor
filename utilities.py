@@ -127,6 +127,7 @@ def get_payer_group(pharmacy_id, inv_grp, source):
     payer_group = session.query(PayerGroupPharmacyMap).filter(
         PayerGroupPharmacyMap.pharmacy_id==pharmacy_id,
         or_(PayerGroupPharmacyMap.source==None, PayerGroupPharmacyMap.source==source),
+        # or_(PayerGroupPharmacyMap.facility_group_id==None, PayerGroupPharmacyMap.facility_group_id==facility_group_id),
         or_(PayerGroupPharmacyMap.name==None, PayerGroupPharmacyMap.name==inv_grp)).first()
 
     return payer_group.id

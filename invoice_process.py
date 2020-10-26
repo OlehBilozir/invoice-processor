@@ -104,8 +104,8 @@ def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmac
     for row in invoice_data:
         first_nm = get_first_name(row['patient'])
         last_nm = get_last_name(row['patient'])
-        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
-        ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'][0] != '_' else 0
+        payer_group_id = get_payer_group(pharmacy_id, row['invgrp'], source)
+        ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'] and row['ssn_no'][0] != '_' else 0
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
@@ -152,8 +152,8 @@ def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharma
     for row in invoice_data:
         first_nm = get_first_name(row['resident'])
         last_nm = get_last_name(row['resident'])
-        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
-        ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'][0] != '_' else 0
+        payer_group_id = get_payer_group(pharmacy_id, row['group'], source)
+        ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'] and row['ssn_no'][0] != '_' else 0
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
@@ -293,8 +293,8 @@ def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy
     for row in invoice_data:
         first_nm = get_first_name(row['full_nm'])
         last_nm = get_last_name(row['full_nm'])
-        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
-        ssn = row['ssn'][:3]+row['ssn'][4:6]+row['ssn'][7:11] if row['ssn'][0] != '_' else ''
+        payer_group_id = get_payer_group(pharmacy_id, row['invoice_grp'], None)
+        ssn = row['ssn'][:3]+row['ssn'][4:6]+row['ssn'][7:11] if row['ssn'] and row['ssn'][0] != '_' else ''
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
@@ -341,7 +341,7 @@ def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id,
     for row in invoice_data:
         first_nm = get_first_name(row['name'])
         last_nm = get_last_name(row['name'])
-        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
+        payer_group_id = get_payer_group(pharmacy_id, row['invoice_group'], None)
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
@@ -390,7 +390,7 @@ def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_i
         last_nm = row['patient_last_nm']
         payer_group_id = get_payer_group(pharmacy_id, row['pay_type_description'], None)
         ssn = row['patient_ssn'][:3]+row['patient_ssn'][4:6]+row['patient_ssn'][7:11] if row['patient_ssn'] and row['patient_ssn'][0] != '_' else ''
-        # import pdb;pdb.set_trace()
+
         record = {
             'invoice_batch_id': invoice_batch_log_id,
             'pharmacy_id': pharmacy_id,
@@ -436,8 +436,8 @@ def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_i
     for row in invoice_data:
         first_nm = get_first_name(row['resident_nm'])
         last_nm = get_last_name(row['resident_nm'])
-        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
-        ssn = row['res_ssn'][:3]+row['res_ssn'][4:6]+row['res_ssn'][7:11] if row['res_ssn'][0] != '_' else ''
+        payer_group_id = get_payer_group(pharmacy_id, row['fin_plan'], source)
+        ssn = row['res_ssn'][:3]+row['res_ssn'][4:6]+row['res_ssn'][7:11] if row['res_ssn'] and row['res_ssn'][0] != '_' else ''
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
@@ -484,8 +484,8 @@ def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_
     for row in invoice_data:
         first_nm = get_first_name(row['resident_nm'])
         last_nm = get_last_name(row['resident_nm'])
-        payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
-        ssn = row['res_ssn'][:3]+row['res_ssn'][4:6]+row['res_ssn'][7:11] if row['res_ssn'][0] != '_' else ''
+        payer_group_id = get_payer_group(pharmacy_id, row['fin_plan'], source)
+        ssn = row['res_ssn'][:3]+row['res_ssn'][4:6]+row['res_ssn'][7:11] if row['res_ssn'] and row['res_ssn'][0] != '_' else ''
 
         record = {
             'invoice_batch_id': invoice_batch_log_id,
