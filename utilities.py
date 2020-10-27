@@ -221,6 +221,7 @@ def validate_row(invoice_fields, header, row, row_idx, log_file):
     _row = {}
     is_valid = True
     for field in invoice_fields:
+        val = None
         if field.sheet_column_name in header:
             idx = header.index(field.sheet_column_name)
             val = clean_text(row[idx].value)
@@ -230,6 +231,9 @@ def validate_row(invoice_fields, header, row, row_idx, log_file):
                 is_valid = False
                 msg = "Should not be empty"
                 print("Row:", row_idx, "," , "Column:", field.sheet_column_name, ",", "Msg:", msg, file=log_file)
+            else:
+                # add column as long as it is not invalid
+                _row[field.field_name] = val                
         else:
             _is_valid, msg = validate_field(field, val)
 
