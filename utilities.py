@@ -143,79 +143,75 @@ def get_reader_settings(pharmacy, source):
 
 
 def validate_field(field, val):
+    # val is not empty
     is_valid = True
     msg = ''
 
-    if val:
-        if field.field_type in ['int', 'long']:
-            try:
-                _val = int(val)
-            except Exception as e:
-                msg = "Invalid number"
-                is_valid = False
-        elif field.field_type == 'char':
-            is_valid = len(val) == 1
-            if not is_valid:
-                msg = 'Invalid char'
-        elif field.field_type == 'decimal':
-            try:
-                _val = float(val.replace("$", "").replace("(", "").replace(")", ""))
-            except Exception as e:
-                is_valid = False
-                msg = "Invalid decimal"
-        elif field.field_type == 'date':
-            is_valid = dateparser.parse(val)
-            if not is_valid:
-                msg = "Invalid date"
-
-        if field.field_validations:
-            for rule in field.field_validations.split(','):
-                _msg = ''
-
-                if rule == 'Ssn':
-                    pat1 = re.compile("^\d{9}|\d{3}-\d{2}-\d{4}$|^$")
-                    pat2 = re.compile("^___-__-____$|^$")
-                    is_valid = pat1.match(val) or pat2.match(val)
-                    if not is_valid:
-                        _msg = "Invalid SSN"
-                elif rule == 'MorF':
-                    is_valid = val.upper() in ['M', 'F']
-                    if not is_valid:
-                        _msg = "Should be M or F"
-                elif rule == 'BorG':
-                    is_valid = val.upper() in ['B', 'G']
-                    if not is_valid:
-                        _msg = "Should be B or G"
-                elif rule == 'MaxLength50':
-                    is_valid = len(val) < 50
-                    if not is_valid:
-                        _msg = "Length should be less than 50"
-                elif rule == 'MaxLength150':
-                    is_valid = len(val) < 150
-                    if not is_valid:
-                        _msg = "Length should be less than 150"
-                elif rule == 'MaxLength500':
-                    is_valid = len(val) < 500
-                    if not is_valid:
-                        _msg = "Length should be less than 500"
-                elif rule == 'MaxLength1000':
-                    is_valid = len(val) < 1000
-                    if not is_valid:
-                        _msg = "Length should be less than 1000"
-                elif rule == 'Name':
-                    try:
-                        first_name, last_name = val.split(',')
-                        is_valid = len(first_name) < 25 and len(last_name) < 25
-                    except Exception as e:
-                        is_valid = False
-                        _msg = "Invalid name"
-
-                if _msg:
-                    msg = msg + ', ' + _msg if msg else _msg
-    else:
-        if not field.is_optional and field.field_validations and 'IsNotEmpty' in field.field_validations:
+    if field.field_type in ['int', 'long']:
+        try:
+            _val = int(val)
+        except Exception as e:
+            msg = "Invalid number"
             is_valid = False
-            msg = "Should not be empty"
+    elif field.field_type == 'char':
+        is_valid = len(val) == 1
+        if not is_valid:
+            msg = 'Invalid char'
+    elif field.field_type == 'decimal':
+        try:
+            _val = float(val.replace("$", "").replace("(", "").replace(")", ""))
+        except Exception as e:
+            is_valid = False
+            msg = "Invalid decimal"
+    elif field.field_type == 'date':
+        is_valid = dateparser.parse(val)
+        if not is_valid:
+            msg = "Invalid date"
+
+    if field.field_validations:
+        for rule in field.field_validations.split(','):
+            _msg = ''
+
+            if rule == 'Ssn':
+                pat1 = re.compile("^\d{9}|\d{3}-\d{2}-\d{4}$|^$")
+                pat2 = re.compile("^___-__-____$|^$")
+                is_valid = pat1.match(val) or pat2.match(val)
+                if not is_valid:
+                    _msg = "Invalid SSN"
+            elif rule == 'MorF':
+                is_valid = val.upper() in ['M', 'F']
+                if not is_valid:
+                    _msg = "Should be M or F"
+            elif rule == 'BorG':
+                is_valid = val.upper() in ['B', 'G']
+                if not is_valid:
+                    _msg = "Should be B or G"
+            elif rule == 'MaxLength50':
+                is_valid = len(val) < 50
+                if not is_valid:
+                    _msg = "Length should be less than 50"
+            elif rule == 'MaxLength150':
+                is_valid = len(val) < 150
+                if not is_valid:
+                    _msg = "Length should be less than 150"
+            elif rule == 'MaxLength500':
+                is_valid = len(val) < 500
+                if not is_valid:
+                    _msg = "Length should be less than 500"
+            elif rule == 'MaxLength1000':
+                is_valid = len(val) < 1000
+                if not is_valid:
+                    _msg = "Length should be less than 1000"
+            elif rule == 'Name':
+                try:
+                    first_name, last_name = val.split(',')
+                    is_valid = len(first_name) < 25 and len(last_name) < 25
+                except Exception as e:
+                    is_valid = False
+                    _msg = "Invalid name"
+
+            if _msg:
+                msg = msg + ', ' + _msg if msg else _msg
 
     return is_valid, msg
 
@@ -223,17 +219,27 @@ def validate_field(field, val):
 def validate_row(invoice_fields, header, row, row_idx, log_file):
     # type list -> dict
     _row = {}
+    is_valid = True
     for field in invoice_fields:
         if field.sheet_column_name in header:
             idx = header.index(field.sheet_column_name)
             val = clean_text(row[idx].value)
-            is_valid, msg = validate_field(field, val)
-            if is_valid:
+
+        if field.sheet_column_name not in header or not val:
+            if not field.is_optional and field.field_validations and 'IsNotEmpty' in field.field_validations:
+                is_valid = False
+                msg = "Should not be empty"
+                print("Row:", row_idx, "," , "Column:", field.sheet_column_name, ",", "Msg:", msg, file=log_file)
+        else:
+            _is_valid, msg = validate_field(field, val)
+
+            if _is_valid:
                 _row[field.field_name] = val
             else:
+                is_valid = False
                 print("Row:", row_idx, "," , "Column:", field.sheet_column_name, ",", "Msg:", msg, file=log_file)
 
-    return _row
+    return is_valid, _row
 
 
 def start_batch_logging(facility_pharmacy_map, invoice_dt, source_id):

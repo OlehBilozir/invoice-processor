@@ -51,14 +51,14 @@ def validate_file(invoice_path, test_mode=False):
 
     for field in invoice_reader_settings.raw_invoice_fields:
         if field.sheet_column_name not in header and not field.is_optional:
-            result = False
+            # result = False
             print(f"Column '{field.sheet_column_name}' not found", file=log_file)
 
     data = []
     # validate each row using field validator
     for row_idx in range(start_index, nrows):
-        cleaned_data = validate_row(invoice_reader_settings.raw_invoice_fields, header, ws[row_idx+1], row_idx+1, log_file)
-        if cleaned_data:
+        is_valid, cleaned_data = validate_row(invoice_reader_settings.raw_invoice_fields, header, ws[row_idx+1], row_idx+1, log_file)
+        if is_valid:
             data.append(cleaned_data)
         else:
             result = False
