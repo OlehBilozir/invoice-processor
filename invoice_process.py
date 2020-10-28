@@ -11,6 +11,7 @@ def validate_file(invoice_path, test_mode=False):
     log_file = open(log_file_path, "w")
     result = True
     print("File Path:", invoice_path, '\n', file=log_file)
+    print("Validating invoice...", file=log_file)
 
     facility = get_facility(invoice_path)
     source = get_source(invoice_path)
@@ -63,6 +64,9 @@ def validate_file(invoice_path, test_mode=False):
         else:
             result = False
 
+    if result:
+        print("Invoice is valid.", file=log_file)
+
     invoice_info = (facility_pharmacy_map, invoice_dt, source, data)
     log_file.close()
 
@@ -73,6 +77,7 @@ def process_invoice(invoice_info, log_path, test_mode=False):
     (facility_pharmacy_map, invoice_dt, source, invoice_data) = invoice_info
     log_file = open(log_path, 'a')
 
+    print("Processing Invoice...", file=log_file)
     # create a log
     source_id = source.id if source else 0
     source_name = source.source_nm.lower() if source else 'general'
@@ -93,6 +98,9 @@ def process_invoice(invoice_info, log_path, test_mode=False):
         test_mode
     )
     
+    if result:
+        print("Invoice inserted successfully", file=log_file)
+
     res = stop_batch_logging(invoice_batch_log_id)
     log_file.close()
 

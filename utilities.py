@@ -50,7 +50,7 @@ def get_ses_client():
 
     return boto3.client(
         'ses',
-        region_name='us-west-2',
+        region_name='us-east-1',
         aws_access_key_id=s3_config['access_key_id'],
         aws_secret_access_key=s3_config['secret_access_key']
     )
