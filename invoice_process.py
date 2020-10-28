@@ -49,10 +49,10 @@ def validate_file(invoice_path, test_mode=False):
     # import pdb; pdb.set_trace()
     header = [get_clean_header_column(ii.value) for ii in ws[invoice_reader_settings.header_row_index+1] if ii.value]
 
-    for field in invoice_reader_settings.raw_invoice_fields:
-        if field.sheet_column_name not in header and not field.is_optional:
-            # result = False
-            print(f"Column '{field.sheet_column_name}' not found", file=log_file)
+    # for field in invoice_reader_settings.raw_invoice_fields:
+    #     if field.sheet_column_name not in header and not field.is_optional:
+    #         result = False
+    #         print(f"Column '{field.sheet_column_name}' not found", file=log_file)
 
     data = []
     # validate each row using field validator
@@ -73,7 +73,6 @@ def process_invoice(invoice_info, log_path, test_mode=False):
     (facility_pharmacy_map, invoice_dt, source, invoice_data) = invoice_info
     log_file = open(log_path, 'a')
 
-    print("Processing Invoice:", file=log_file)
     # create a log
     source_id = source.id if source else 0
     source_name = source.source_nm.lower() if source else 'general'

@@ -154,59 +154,14 @@ def test_validate_field_string_Name():
     assert is_valid == True
 
 
-# -- both work
-# def test_pharmscripts_portal():
-#     file_name = '2020/October/Deer Meadows NEW/Portal/Boyd April Untouched Invoice.xlsx'
-#     file_name = '2020/October/Deer Meadows NEW/Portal/Pharmscripts Portal Invoice.xlsx'
-
-#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
-#     assert result == True
-
-#     result = invoice_process.process_invoice(invoice_info, log_file, True)
-#     assert result == True
-
-# -- invalid Bed
-# def test_pharmscripts_email():
-#     file_name = '2020/October/Deer Meadows NEW/Email/Pharmscripts Emailed Invoice.xlsx'
-
-#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
-#     assert result == False
-
-#     # result = invoice_process.process_invoice(invoice_info, log_file, True)
-#     # assert result == True
-
-# -- both work
-# def test_process_row_omnicare_general():
-#     file_name = '2020/October/Beacon/General/Holland September Untouched Invoice.xlsx'
-#     file_name = '2020/October/Beacon/General/Omnicare Email.xlsx'
-
-#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
-#     assert result == True
-
-#     result = invoice_process.process_invoice(invoice_info, log_file, True)
-#     assert result == True
-
-# -- work
-# def test_pharmerica_email():
-#     file_name = '2020/October/Ridgewood/Email/Cartersville May Invoice.xlsx'
-
-#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
-#     assert result == True
-
-#     result = invoice_process.process_invoice(invoice_info, log_file, True)
-#     assert result == True
+def clear_test_data():
+    session.query(PharmacyInvoice).filter(PharmacyInvoice.duplicate_flg==1).delete()
 
 
-# def test_pharmerica_portal():
-#     file_name = '2020/October/Ridgewood/Portal/Pharmerica Portal Invoice.xlsx'
+def test_pharmscripts_portal():
+    file_name = '2020/October/Deer Meadows NEW/Portal/Pharmscripts Portal Invoice.xlsx'
 
-#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
-#     assert result == False
-
-
-# not working
-def test_geriscript_general():
-    file_name = '2020/October/Green Acres/General/Geriscript invoice.xlsx'
+    clear_test_data()
 
     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
     assert result == True
@@ -214,22 +169,335 @@ def test_geriscript_general():
     result = invoice_process.process_invoice(invoice_info, log_file, True)
     assert result == True
 
+    row = invoice_info[3][0]
+    pharmacy_id = invoice_info[0].pharmacy.id
+    facility_id = invoice_info[0].facility.id
 
-# def test_speciality_rx_email():
-#     file_name = '2020/October/Ashbrook/Email/Specialty Emailed Version.xlsx'
+    first_nm = get_first_name(row['patient_nm'])
+    last_nm = get_last_name(row['patient_nm'])
+
+    record = session.query(PharmacyInvoice).filter(
+                PharmacyInvoice.pharmacy_id==pharmacy_id,
+                PharmacyInvoice.facility_id==facility_id,
+                PharmacyInvoice.first_nm==first_nm,
+                PharmacyInvoice.last_nm==last_nm,
+                PharmacyInvoice.ssn==row['ssn'],
+                PharmacyInvoice.dispense_dt==row['disp_dt'],
+                PharmacyInvoice.product_category==row['rx_type'],
+                PharmacyInvoice.drug_nm==row['drug'],
+                PharmacyInvoice.doctor==row['physician'],
+                PharmacyInvoice.rx_nbr==row['rx_no'],
+                PharmacyInvoice.ndc==row['ndc'],
+                PharmacyInvoice.quantity==row['qty'],
+                PharmacyInvoice.days_supplied==row['ds'],
+                PharmacyInvoice.charge_amt==row['bill'],
+                PharmacyInvoice.note==row['billing_comment'],
+                PharmacyInvoice.duplicate_flg==1
+            ).first()
+
+    assert record is not None
+
+
+def test_pharmscripts_portal_missing_name():
+    file_name = '2020/October/Deer Meadows NEW/Portal/Pharmscripts Portal Invoice - missing columns.xlsx'
+
+    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+    assert result == False
+
+
+def test_pharmscripts_email_invalid_bed():
+    file_name = '2020/October/Deer Meadows NEW/Email/Pharmscripts Emailed Invoice - invalid bed.xlsx'
+
+    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+    assert result == False
+
+
+# -- invalid Bed
+# def test_pharmscripts_email():
+#     file_name = '2020/October/Deer Meadows NEW/Email/Pharmscripts Emailed Invoice.xlsx'
+
+#     clear_test_data()
 
 #     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
 #     assert result == True
 
 #     result = invoice_process.process_invoice(invoice_info, log_file, True)
 #     assert result == True
+
+#     row = invoice_info[3][0]
+#     pharmacy_id = invoice_info[0].pharmacy.id
+#     facility_id = invoice_info[0].facility.id
+
+#     first_nm = get_first_name(row['patient_nm'])
+#     last_nm = get_last_name(row['patient_nm'])
+
+#     record = session.query(PharmacyInvoice).filter(
+#                 PharmacyInvoice.pharmacy_id==pharmacy_id,
+#                 PharmacyInvoice.facility_id==facility_id,
+#                 PharmacyInvoice.first_nm==first_nm,
+#                 PharmacyInvoice.last_nm==last_nm,
+#                 PharmacyInvoice.ssn==row['ssn'],
+#                 PharmacyInvoice.dispense_dt==row['disp_dt'],
+#                 PharmacyInvoice.product_category==row['rx_type'],
+#                 PharmacyInvoice.drug_nm==row['drug'],
+#                 PharmacyInvoice.doctor==row['physician'],
+#                 PharmacyInvoice.rx_nbr==row['rx_no'],
+#                 PharmacyInvoice.ndc==row['ndc'],
+#                 PharmacyInvoice.quantity==row['qty'],
+#                 PharmacyInvoice.days_supplied==row['ds'],
+#                 PharmacyInvoice.charge_amt==row['bill'],
+#                 PharmacyInvoice.note==row['billing_comment'],
+#                 PharmacyInvoice.duplicate_flg==1
+#             ).first()
+
+#     assert record is not None
+
+
+def test_process_row_omnicare_general():
+    file_name = '2020/October/Beacon/General/Omnicare Email.xlsx'
+
+    clear_test_data()
+
+    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+    assert result == True
+
+    result = invoice_process.process_invoice(invoice_info, log_file, True)
+    assert result == True
+
+    row = invoice_info[3][0]
+    pharmacy_id = invoice_info[0].pharmacy.id
+    facility_id = invoice_info[0].facility.id
+
+    first_nm = row['patient_first_nm']
+    last_nm = row['patient_last_nm']
+    ssn = row['patient_ssn'][:3]+row['patient_ssn'][4:6]+row['patient_ssn'][7:11] if row['patient_ssn'] and row['patient_ssn'][0] != '_' else ''
+
+    record = session.query(PharmacyInvoice).filter(
+                PharmacyInvoice.pharmacy_id==pharmacy_id,
+                PharmacyInvoice.facility_id==facility_id,
+                PharmacyInvoice.first_nm==first_nm,
+                PharmacyInvoice.last_nm==last_nm,
+                PharmacyInvoice.ssn==ssn,
+                PharmacyInvoice.dispense_dt==row['transaction_dt'],
+                PharmacyInvoice.product_category==row['inventory_category'],
+                PharmacyInvoice.drug_nm==row['description'],
+                PharmacyInvoice.doctor==row['physician'],
+                PharmacyInvoice.rx_nbr==row['rx'],
+                PharmacyInvoice.ndc==row['ndc'],
+                PharmacyInvoice.reject_cd==row['reject_codes'],
+                PharmacyInvoice.quantity==row['qty'],
+                PharmacyInvoice.days_supplied==row['days_supply'],
+                PharmacyInvoice.charge_amt==row['amount'],
+                PharmacyInvoice.duplicate_flg==1,
+                PharmacyInvoice.note==row['statement_note']
+            ).first()
+
+    assert record is not None
+
+
+def test_process_row_omnicare_general_invalid_amount():
+    file_name = '2020/October/Beacon/General/Omnicare Email - invalid amount.xlsx'
+
+    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+    assert result == False
+
+
+# def test_pharmerica_email():
+#     file_name = '2020/October/Ridgewood/Email/Cartersville May Invoice.xlsx'
+
+#     clear_test_data()
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+#     row = invoice_info[3][0]
+#     pharmacy_id = invoice_info[0].pharmacy.id
+#     facility_id = invoice_info[0].facility.id
+
+#     first_nm = get_first_name(row['patient_nm'])
+#     last_nm = get_last_name(row['patient_nm'])
+
+#     record = session.query(PharmacyInvoice).filter(
+#                 PharmacyInvoice.pharmacy_id==pharmacy_id,
+#                 PharmacyInvoice.facility_id==facility_id,
+#                 PharmacyInvoice.first_nm==first_nm,
+#                 PharmacyInvoice.last_nm==last_nm,
+#                 PharmacyInvoice.ssn==row['ssn'],
+#                 PharmacyInvoice.dispense_dt==row['disp_dt'],
+#                 PharmacyInvoice.product_category==row['rx_type'],
+#                 PharmacyInvoice.drug_nm==row['drug'],
+#                 PharmacyInvoice.doctor==row['physician'],
+#                 PharmacyInvoice.rx_nbr==row['rx_no'],
+#                 PharmacyInvoice.ndc==row['ndc'],
+#                 PharmacyInvoice.quantity==row['qty'],
+#                 PharmacyInvoice.days_supplied==row['ds'],
+#                 PharmacyInvoice.charge_amt==row['bill'],
+#                 PharmacyInvoice.note==row['billing_comment'],
+#                 PharmacyInvoice.duplicate_flg==1
+#             ).first()
+
+#     assert record is not None
+
+
+# def test_pharmerica_portal():
+#     file_name = '2020/October/Ridgewood/Portal/Pharmerica Portal Invoice.xlsx'
+
+#     clear_test_data()
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+#     row = invoice_info[3][0]
+#     pharmacy_id = invoice_info[0].pharmacy.id
+#     facility_id = invoice_info[0].facility.id
+
+#     first_nm = get_first_name(row['patient_nm'])
+#     last_nm = get_last_name(row['patient_nm'])
+
+#     record = session.query(PharmacyInvoice).filter(
+#                 PharmacyInvoice.pharmacy_id==pharmacy_id,
+#                 PharmacyInvoice.facility_id==facility_id,
+#                 PharmacyInvoice.first_nm==first_nm,
+#                 PharmacyInvoice.last_nm==last_nm,
+#                 PharmacyInvoice.ssn==row['ssn'],
+#                 PharmacyInvoice.dispense_dt==row['disp_dt'],
+#                 PharmacyInvoice.product_category==row['rx_type'],
+#                 PharmacyInvoice.drug_nm==row['drug'],
+#                 PharmacyInvoice.doctor==row['physician'],
+#                 PharmacyInvoice.rx_nbr==row['rx_no'],
+#                 PharmacyInvoice.ndc==row['ndc'],
+#                 PharmacyInvoice.quantity==row['qty'],
+#                 PharmacyInvoice.days_supplied==row['ds'],
+#                 PharmacyInvoice.charge_amt==row['bill'],
+#                 PharmacyInvoice.note==row['billing_comment'],
+#                 PharmacyInvoice.duplicate_flg==1
+#             ).first()
+
+#     assert record is not None
+
+
+# # not working
+# def test_geriscript_general():
+#     file_name = '2020/October/Green Acres/General/Geriscript invoice.xlsx'
+
+#     clear_test_data()
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+#     row = invoice_info[3][0]
+#     pharmacy_id = invoice_info[0].pharmacy.id
+#     facility_id = invoice_info[0].facility.id
+
+#     first_nm = get_first_name(row['patient_nm'])
+#     last_nm = get_last_name(row['patient_nm'])
+
+#     record = session.query(PharmacyInvoice).filter(
+#                 PharmacyInvoice.pharmacy_id==pharmacy_id,
+#                 PharmacyInvoice.facility_id==facility_id,
+#                 PharmacyInvoice.first_nm==first_nm,
+#                 PharmacyInvoice.last_nm==last_nm,
+#                 PharmacyInvoice.ssn==row['ssn'],
+#                 PharmacyInvoice.dispense_dt==row['disp_dt'],
+#                 PharmacyInvoice.product_category==row['rx_type'],
+#                 PharmacyInvoice.drug_nm==row['drug'],
+#                 PharmacyInvoice.doctor==row['physician'],
+#                 PharmacyInvoice.rx_nbr==row['rx_no'],
+#                 PharmacyInvoice.ndc==row['ndc'],
+#                 PharmacyInvoice.quantity==row['qty'],
+#                 PharmacyInvoice.days_supplied==row['ds'],
+#                 PharmacyInvoice.charge_amt==row['bill'],
+#                 PharmacyInvoice.note==row['billing_comment'],
+#                 PharmacyInvoice.duplicate_flg==1
+#             ).first()
+
+#     assert record is not None
+
+
+# def test_speciality_rx_email():
+#     file_name = '2020/October/Ashbrook/Email/Specialty Emailed Version.xlsx'
+
+#     clear_test_data()
+
+#     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+#     assert result == True
+
+#     result = invoice_process.process_invoice(invoice_info, log_file, True)
+#     assert result == True
+
+#     row = invoice_info[3][0]
+#     pharmacy_id = invoice_info[0].pharmacy.id
+#     facility_id = invoice_info[0].facility.id
+
+#     first_nm = get_first_name(row['patient_nm'])
+#     last_nm = get_last_name(row['patient_nm'])
+
+#     record = session.query(PharmacyInvoice).filter(
+#                 PharmacyInvoice.pharmacy_id==pharmacy_id,
+#                 PharmacyInvoice.facility_id==facility_id,
+#                 PharmacyInvoice.first_nm==first_nm,
+#                 PharmacyInvoice.last_nm==last_nm,
+#                 PharmacyInvoice.ssn==row['ssn'],
+#                 PharmacyInvoice.dispense_dt==row['disp_dt'],
+#                 PharmacyInvoice.product_category==row['rx_type'],
+#                 PharmacyInvoice.drug_nm==row['drug'],
+#                 PharmacyInvoice.doctor==row['physician'],
+#                 PharmacyInvoice.rx_nbr==row['rx_no'],
+#                 PharmacyInvoice.ndc==row['ndc'],
+#                 PharmacyInvoice.quantity==row['qty'],
+#                 PharmacyInvoice.days_supplied==row['ds'],
+#                 PharmacyInvoice.charge_amt==row['bill'],
+#                 PharmacyInvoice.note==row['billing_comment'],
+#                 PharmacyInvoice.duplicate_flg==1
+#             ).first()
+
+#     assert record is not None
 
 
 # def test_speciality_rx_portal():
 #     file_name = '2020/October/Ashbrook/Portal/Specialty Portal Invoice.xlsx'
 
+#     clear_test_data()
+
 #     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
 #     assert result == True
 
 #     result = invoice_process.process_invoice(invoice_info, log_file, True)
 #     assert result == True
+
+#     row = invoice_info[3][0]
+#     pharmacy_id = invoice_info[0].pharmacy.id
+#     facility_id = invoice_info[0].facility.id
+
+#     first_nm = get_first_name(row['patient_nm'])
+#     last_nm = get_last_name(row['patient_nm'])
+
+#     record = session.query(PharmacyInvoice).filter(
+#                 PharmacyInvoice.pharmacy_id==pharmacy_id,
+#                 PharmacyInvoice.facility_id==facility_id,
+#                 PharmacyInvoice.first_nm==first_nm,
+#                 PharmacyInvoice.last_nm==last_nm,
+#                 PharmacyInvoice.ssn==row['ssn'],
+#                 PharmacyInvoice.dispense_dt==row['disp_dt'],
+#                 PharmacyInvoice.product_category==row['rx_type'],
+#                 PharmacyInvoice.drug_nm==row['drug'],
+#                 PharmacyInvoice.doctor==row['physician'],
+#                 PharmacyInvoice.rx_nbr==row['rx_no'],
+#                 PharmacyInvoice.ndc==row['ndc'],
+#                 PharmacyInvoice.quantity==row['qty'],
+#                 PharmacyInvoice.days_supplied==row['ds'],
+#                 PharmacyInvoice.charge_amt==row['bill'],
+#                 PharmacyInvoice.note==row['billing_comment'],
+#                 PharmacyInvoice.duplicate_flg==1
+#             ).first()
+
+#     assert record is not None

@@ -275,4 +275,4 @@ def get_last_name(name):
 
 
 def get_clean_header_column(text):
-    return ' '.join(re.findall('\S+', text))
+    return ' '.join(re.findall('\S+', str(text)))
