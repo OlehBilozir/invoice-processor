@@ -103,6 +103,20 @@ def send_email(subject, from_email, to_emails, body, attachment=None):
     return resp
 
 
+def get_year(file_name):
+    try:
+        return int(file_name.split('/')[0])
+    except Exception as e:
+        pass
+
+
+def get_month(file_name):
+    try:
+        return int(file_name.split('/')[1])
+    except Exception as e:
+        pass
+
+
 def get_facility(file_name):
     facility_name = file_name.split('/')[2]
     facility = session.query(Facility).filter(Facility.facility_nm==facility_name).first()

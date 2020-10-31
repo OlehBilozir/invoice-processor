@@ -11,7 +11,16 @@ def validate_file(invoice_path, test_mode=False):
     log_file = open(log_file_path, "w")
     result = True
     print("File Path:", invoice_path, '\n', file=log_file)
-    print("Validating invoice...", file=log_file)
+    print("1. Validating invoice:", file=log_file)
+
+    year = get_year(invoice_path)
+    month = get_month(invoice_path)
+    if year and month:
+        invoice_dt = datetime.date(year, month, 1)
+    else:
+        print("Year and/or month are not correct in path", file=log_file)
+        log_file.close()
+        return False, log_file_path, None
 
     facility = get_facility(invoice_path)
     source = get_source(invoice_path)
@@ -31,8 +40,6 @@ def validate_file(invoice_path, test_mode=False):
     else:
         file_name = 'sample_invoices/' + invoice_path.split('/')[-1]
 
-    invoice_dt = datetime.datetime.now().date()
-
     # parse invoice
     wb = load_workbook(file_name)
 
@@ -47,7 +54,7 @@ def validate_file(invoice_path, test_mode=False):
     # get meta info from [pharmacy_invoice_reader_settings]
     start_index = invoice_reader_settings.header_row_index + invoice_reader_settings.skip_rows_after_header + 1
     nrows = get_valid_rows_count(ws) - invoice_reader_settings.skip_ending_rows
-    # import pdb; pdb.set_trace()
+
     header = [get_clean_header_column(ii.value) for ii in ws[invoice_reader_settings.header_row_index+1] if ii.value]
 
     # for field in invoice_reader_settings.raw_invoice_fields:
@@ -65,7 +72,7 @@ def validate_file(invoice_path, test_mode=False):
             result = False
 
     if result:
-        print("Invoice is valid.", file=log_file)
+        print("Invoice is valid.\n", file=log_file)
 
     invoice_info = (facility_pharmacy_map, invoice_dt, source, data)
     log_file.close()
@@ -77,7 +84,7 @@ def process_invoice(invoice_info, log_path, test_mode=False):
     (facility_pharmacy_map, invoice_dt, source, invoice_data) = invoice_info
     log_file = open(log_path, 'a')
 
-    print("Processing Invoice...", file=log_file)
+    print("2. Processing Invoice:", file=log_file)
     # create a log
     source_id = source.id if source else 0
     source_name = source.source_nm.lower() if source else 'general'
@@ -87,19 +94,37 @@ def process_invoice(invoice_info, log_path, test_mode=False):
     facility_id = facility_pharmacy_map.facility.id
     process_invoice_func = globals().get(f'_process_row_{pharmacy_name}_{source_name}')
 
-    result = process_invoice_func(
-        invoice_data,
-        invoice_batch_log_id,
-        pharmacy_id,
-        facility_id,
-        invoice_dt,
-        source_id,
-        log_file,
-        test_mode
-    )
+    try:
+        # delete any pre-existing records
+        session.query(PharmacyInvoice).filter(
+            PharmacyInvoice.duplicate_flg==test_mode,
+            PharmacyInvoice.pharmacy_id==pharmacy_id,
+            PharmacyInvoice.facility_id==facility_id,
+            PharmacyInvoice.invoice_dt==invoice_dt).delete()
+
+        result, load_data = process_invoice_func(
+            invoice_data,
+            invoice_batch_log_id,
+            pharmacy_id,
+            facility_id,
+            invoice_dt,
+            source_id,
+            log_file,
+            test_mode
+        )
+
+        if not result:
+            raise Exception("Transformation failed.")
+
+        session.add_all(load_data)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        result = False
+        print(str(e), file=log_file)
     
     if result:
-        print("Invoice inserted successfully", file=log_file)
+        print("Invoice uploaded successfully", file=log_file)
 
     res = stop_batch_logging(invoice_batch_log_id)
     log_file.close()
@@ -108,7 +133,9 @@ def process_invoice(invoice_info, log_path, test_mode=False):
 
 
 def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['patient'])
@@ -150,19 +177,18 @@ def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmac
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
             print(str(e), file=log_file)
-            session.rollback()
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
 
 
 def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['resident'])
@@ -204,19 +230,18 @@ def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharma
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            session.rollback()
             print(str(e), file=log_file)
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
 
 
 def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['patient_nm'])
@@ -256,19 +281,18 @@ def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmac
                 'credit_request_cd': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            session.rollback()
             print(str(e), file=log_file)
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result, load_data
 
 
 def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['patient'])
@@ -309,19 +333,18 @@ def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            session.rollback()
             print(str(e), file=log_file)
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
 
 
 def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['full_nm'])
@@ -363,19 +386,18 @@ def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            session.rollback()
             print(str(e), file=log_file)
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
 
 
 def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['name'])
@@ -416,19 +438,18 @@ def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id,
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            session.rollback()
             print(str(e), file=log_file)
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
 
 
 def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = row['patient_first_nm']
@@ -470,19 +491,18 @@ def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_i
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
             print(str(e), file=log_file)
-            session.rollback()
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
 
 
 def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['resident_nm'])
@@ -524,19 +544,18 @@ def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_i
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            session.rollback()
             print(str(e), file=log_file)
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
 
 
 def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
-    num_inserted = 0
+    result = True
+    load_data = []
+
     for row in invoice_data:
         try:
             first_nm = get_first_name(row['resident_nm'])
@@ -578,12 +597,9 @@ def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_
                 'days_overbilled': None
             }
 
-            pharmacy_invoice = PharmacyInvoice(**record)
-            session.add(pharmacy_invoice)
-            session.commit()
-            num_inserted += 1
+            load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            session.rollback()
             print(str(e), file=log_file)
+            result = False
 
-    return len(invoice_data) == num_inserted
+    return result
