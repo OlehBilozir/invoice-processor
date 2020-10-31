@@ -62,11 +62,14 @@ def clean_text(val):
 
 
 def get_valid_rows_count(ws):
-    for max_row, row in enumerate(ws, 1):
-        if all(c.value is None or str(c.value).strip() == '' for c in row):
-            return max_row - 1
+    try:
+        for max_row, row in enumerate(ws, 1):
+            if all(c.value is None or str(c.value).strip() == '' for c in row):
+                return max_row - 1
 
-    return ws.max_row
+        return ws.max_row
+    except Exception as e:
+        pass
 
 
 def get_valid_cols_count(ws):

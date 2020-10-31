@@ -47,13 +47,19 @@ def validate_file(invoice_path, test_mode=False):
         sheet_name = invoice_reader_settings.sheet_name or wb.sheetnames[0]
         ws = wb[sheet_name]
     except Exception as e:
-        print(f"Required sheet ('{sheetName}') not found.", file=log_file)
+        print(f"Required sheet ({sheet_name}) not found.", file=log_file)
+        log_file.close()
+        return False, log_file_path, None
+
+    nrows = get_valid_rows_count(ws)
+    if not nrows:
+        print(f"The sheet ({sheet_name}) is invalid.", file=log_file)
         log_file.close()
         return False, log_file_path, None
 
     # get meta info from [pharmacy_invoice_reader_settings]
     start_index = invoice_reader_settings.header_row_index + invoice_reader_settings.skip_rows_after_header + 1
-    nrows = get_valid_rows_count(ws) - invoice_reader_settings.skip_ending_rows
+    nrows = nrows - invoice_reader_settings.skip_ending_rows
 
     header = [get_clean_header_column(ii.value) for ii in ws[invoice_reader_settings.header_row_index+1] if ii.value]
 
@@ -118,21 +124,19 @@ def process_invoice(invoice_info, log_path, test_mode=False):
 
         session.add_all(load_data)
         session.commit()
+        print("Invoice uploaded successfully", file=log_file)
     except Exception as e:
         session.rollback()
         result = False
         print(str(e), file=log_file)
     
-    if result:
-        print("Invoice uploaded successfully", file=log_file)
-
     res = stop_batch_logging(invoice_batch_log_id)
     log_file.close()
 
     return result
 
 
-def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
+def _process_row_specialty_rx_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     result = True
     load_data = []
 
@@ -182,10 +186,10 @@ def _process_row_speciality_rx_email(invoice_data, invoice_batch_log_id, pharmac
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
 
 
-def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
+def _process_row_specialty_rx_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
     result = True
     load_data = []
 
@@ -194,7 +198,6 @@ def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharma
             first_nm = get_first_name(row['resident'])
             last_nm = get_last_name(row['resident'])
             payer_group_id = get_payer_group(pharmacy_id, row['group'], source)
-            ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'] and row['ssn_no'][0] != '_' else 0
 
             record = {
                 'invoice_batch_id': invoice_batch_log_id,
@@ -218,7 +221,7 @@ def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharma
                 'days_supplied': row['days_supply'],
                 'charge_amt': row['amount'],
                 'copay_amt': None,
-                'copay_flg': 'Y' if row['is_a_copay'].upper() == 'COPAY' else None,
+                'copay_flg': 'Y' if row['is_a_copay'] and row['is_a_copay'].upper() == 'COPAY' else None,
                 'census_match_cd': None,
                 'status_cd': None,
                 'charge_confirmed_flg': None,
@@ -235,7 +238,7 @@ def _process_row_speciality_rx_portal(invoice_data, invoice_batch_log_id, pharma
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
 
 
 def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
@@ -338,7 +341,7 @@ def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
 
 
 def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
@@ -391,7 +394,7 @@ def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
 
 
 def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
@@ -443,7 +446,7 @@ def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id,
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
 
 
 def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
@@ -496,7 +499,7 @@ def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_i
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
 
 
 def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
@@ -549,7 +552,7 @@ def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_i
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
 
 
 def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_id, facility_id, invoice_dt, source, log_file, test_mode=False):
@@ -602,4 +605,4 @@ def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_
             print(str(e), file=log_file)
             result = False
 
-    return result
+    return result, load_data
