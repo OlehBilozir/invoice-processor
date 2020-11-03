@@ -38,7 +38,7 @@ def validate_file(invoice_path, test_mode=False):
         file_name = 'invoice.xlsx'
         invoice_path = get_s3_client().download_file(get_s3_bucket(), invoice_path, file_name)
     else:
-        file_name = 'sample_invoices/' + invoice_path.split('/')[-1]
+        file_name = 'test_files/' + invoice_path.split('/')[-1]
 
     # parse invoice
     wb = load_workbook(file_name)
