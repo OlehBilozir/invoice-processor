@@ -415,53 +415,9 @@ def test_validate_field_string_Name():
 
 #     assert record is not None
 
-
-def test_speciality_rx_email():
-    file_name = '2020/10/Ashbrook/Email/Specialty Emailed Version.xlsx'
-
-    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
-    assert result == True
-
-    result = invoice_process.process_invoice(invoice_info, log_file, True)
-    assert result == True
-
-    row = invoice_info[3][0]
-    pharmacy_id = invoice_info[0].pharmacy.id
-    facility_id = invoice_info[0].facility.id
-
-    first_nm = get_first_name(row['patient'])
-    last_nm = get_last_name(row['patient'])
-    ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'] and row['ssn_no'][0] != '_' else 0
-
-    record = session.query(PharmacyInvoice).filter(
-                PharmacyInvoice.pharmacy_id==pharmacy_id,
-                PharmacyInvoice.facility_id==facility_id,
-                PharmacyInvoice.first_nm==first_nm,
-                PharmacyInvoice.last_nm==last_nm,
-                PharmacyInvoice.ssn==ssn,
-                PharmacyInvoice.dispense_dt==row['dispdt'],
-                PharmacyInvoice.product_category==row['rx_otc'],
-                PharmacyInvoice.drug_nm==row['drug'],
-                PharmacyInvoice.doctor==None,
-                PharmacyInvoice.rx_nbr==row['rx_no'],
-                PharmacyInvoice.ndc==row['ndc'],
-                PharmacyInvoice.reject_cd==None,
-                PharmacyInvoice.quantity==row['qty'],
-                PharmacyInvoice.days_supplied==row['ds'],
-                PharmacyInvoice.charge_amt==row['billamt'],
-                PharmacyInvoice.copay_amt==None,
-                PharmacyInvoice.census_match_cd==None,
-                PharmacyInvoice.status_cd==None,
-                PharmacyInvoice.charge_confirmed_flg==None,
-                PharmacyInvoice.note==row['comment'],
-                PharmacyInvoice.duplicate_flg==1
-            ).first()
-
-    assert record is not None
-
-
-# def test_speciality_rx_portal():
-#     file_name = '2020/10/Ashbrook/Portal/Specialty Portal Invoice.xlsx'
+# invalid file
+# def test_speciality_rx_email():
+#     file_name = '2020/10/Ashbrook/Email/Specialty Emailed Version.xlsx'
 
 #     result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
 #     assert result == True
@@ -473,30 +429,74 @@ def test_speciality_rx_email():
 #     pharmacy_id = invoice_info[0].pharmacy.id
 #     facility_id = invoice_info[0].facility.id
 
-#     first_nm = get_first_name(row['resident'])
-#     last_nm = get_last_name(row['resident'])
+#     first_nm = get_first_name(row['patient'])
+#     last_nm = get_last_name(row['patient'])
+#     ssn = row['ssn_no'][:3]+row['ssn_no'][4:6]+row['ssn_no'][7:11] if row['ssn_no'] and row['ssn_no'][0] != '_' else 0
 
 #     record = session.query(PharmacyInvoice).filter(
 #                 PharmacyInvoice.pharmacy_id==pharmacy_id,
 #                 PharmacyInvoice.facility_id==facility_id,
 #                 PharmacyInvoice.first_nm==first_nm,
 #                 PharmacyInvoice.last_nm==last_nm,
-#                 PharmacyInvoice.dispense_dt==row['dispensed'],
-#                 PharmacyInvoice.product_category==row['rx_type'],
-#                 PharmacyInvoice.drug_nm==row['drug_nm'],
+#                 PharmacyInvoice.ssn==ssn,
+#                 PharmacyInvoice.dispense_dt==row['dispdt'],
+#                 PharmacyInvoice.product_category==row['rx_otc'],
+#                 PharmacyInvoice.drug_nm==row['drug'],
 #                 PharmacyInvoice.doctor==None,
 #                 PharmacyInvoice.rx_nbr==row['rx_no'],
-#                 PharmacyInvoice.ndc==None,
+#                 PharmacyInvoice.ndc==row['ndc'],
 #                 PharmacyInvoice.reject_cd==None,
-#                 PharmacyInvoice.quantity==row['quantity'],
-#                 PharmacyInvoice.days_supplied==row['days_supply'],
-#                 PharmacyInvoice.charge_amt==row['amount'],
+#                 PharmacyInvoice.quantity==row['qty'],
+#                 PharmacyInvoice.days_supplied==row['ds'],
+#                 PharmacyInvoice.charge_amt==row['billamt'],
 #                 PharmacyInvoice.copay_amt==None,
 #                 PharmacyInvoice.census_match_cd==None,
 #                 PharmacyInvoice.status_cd==None,
 #                 PharmacyInvoice.charge_confirmed_flg==None,
-#                 PharmacyInvoice.note==row['billing_comment'],
+#                 PharmacyInvoice.note==row['comment'],
 #                 PharmacyInvoice.duplicate_flg==1
 #             ).first()
 
 #     assert record is not None
+
+
+def test_speciality_rx_portal():
+    file_name = '2020/10/Ashbrook/Portal/Specialty Portal Invoice.xlsx'
+
+    result, log_file, invoice_info = invoice_process.validate_file(file_name, True)
+    assert result == True
+
+    result = invoice_process.process_invoice(invoice_info, log_file, True)
+    assert result == True
+
+    row = invoice_info[3][0]
+    pharmacy_id = invoice_info[0].pharmacy.id
+    facility_id = invoice_info[0].facility.id
+
+    first_nm = get_first_name(row['resident'])
+    last_nm = get_last_name(row['resident'])
+
+    record = session.query(PharmacyInvoice).filter(
+                PharmacyInvoice.pharmacy_id==pharmacy_id,
+                PharmacyInvoice.facility_id==facility_id,
+                PharmacyInvoice.first_nm==first_nm,
+                PharmacyInvoice.last_nm==last_nm,
+                PharmacyInvoice.dispense_dt==row['dispensed'],
+                PharmacyInvoice.product_category==row['rx_type'],
+                PharmacyInvoice.drug_nm==row['drug_nm'],
+                PharmacyInvoice.doctor==None,
+                PharmacyInvoice.rx_nbr==row['rx_no'],
+                PharmacyInvoice.ndc==None,
+                PharmacyInvoice.reject_cd==None,
+                PharmacyInvoice.quantity==row['quantity'],
+                PharmacyInvoice.days_supplied==row['days_supply'],
+                PharmacyInvoice.charge_amt==row['amount'],
+                PharmacyInvoice.copay_amt==None,
+                PharmacyInvoice.census_match_cd==None,
+                PharmacyInvoice.status_cd==None,
+                PharmacyInvoice.charge_confirmed_flg==None,
+                PharmacyInvoice.note==row['billing_comment'],
+                PharmacyInvoice.duplicate_flg==1
+            ).first()
+
+    assert record is not None

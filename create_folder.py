@@ -10,7 +10,10 @@ def main():
     facilities = get_facilities()
 
     for facility in facilities:
-        pharmacy = get_pharmacy(facility).pharmacy
+        pharmacy_map = get_pharmacy(facility)
+        if not pharmacy_map:
+            continue
+        pharmacy = pharmacy_map.pharmacy
         reader_settings = get_reader_settings(pharmacy)
         for rs in reader_settings:
             source = 'Portal' if rs.invoice_source_id == 1 else 'Email' if rs.invoice_source_id == 2 else 'General'
