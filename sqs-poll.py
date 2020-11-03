@@ -5,7 +5,7 @@ import invoice_process
 from utilities import send_email, get_sqs_resource
 
 
-QUEUE_NAME = 'ltc-ancillary-reconciliation.fifo'
+QUEUE_NAME = os.getenv('QUEUE_NAME')
 MAX_QUEUE_MESSAGES = 1
 
 sqs = get_sqs_resource()
