@@ -8,6 +8,8 @@ services:
       - "db_user="
       - "db_password="
       - "QUEUE_NAME=ltc-ancillary-reconciliation.fifo"
+      - "FROM_EMAIL="
+      - "TO_EMAIL="
     build:
       context: .
       dockerfile: Dockerfile
