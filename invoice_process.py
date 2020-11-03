@@ -26,7 +26,7 @@ def validate_file(invoice_path, test_mode=False):
     source = get_source(invoice_path)
     facility_pharmacy_map = get_pharmacy(facility)
     pharmacy = facility_pharmacy_map.pharmacy
-    invoice_reader_settings = get_reader_settings(pharmacy, source)
+    invoice_reader_settings = get_reader_setting(pharmacy, source)
 
     if not invoice_reader_settings:
         print("Reader setting is not available", file=log_file)

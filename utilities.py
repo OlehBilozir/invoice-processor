@@ -120,6 +120,10 @@ def get_month(file_name):
         pass
 
 
+def get_facilities():
+    return session.query(Facility).filter(Facility.delete_by==None)
+
+
 def get_facility(file_name):
     facility_name = file_name.split('/')[2]
     facility = session.query(Facility).filter(Facility.facility_nm==facility_name).first()
@@ -150,7 +154,14 @@ def get_payer_group(pharmacy_id, inv_grp, source):
     return payer_group.id
 
 
-def get_reader_settings(pharmacy, source):
+def get_reader_settings(pharmacy):
+    reader_settings = session.query(PharmacyInvoiceReaderSetting).filter(
+        PharmacyInvoiceReaderSetting.pharmacy_id==pharmacy.id)
+
+    return reader_settings
+
+
+def get_reader_setting(pharmacy, source):
     source_id = source.id if source else 0
     reader_settings = session.query(PharmacyInvoiceReaderSetting).filter(
         PharmacyInvoiceReaderSetting.pharmacy_id==pharmacy.id,
