@@ -1,5 +1,4 @@
 import re
-import configparser
 
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
