@@ -379,7 +379,7 @@ def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy
                 'days_supplied': row['days_supply'],
                 'charge_amt': row['bill_amt'],
                 'copay_amt': row['copay_amt'],
-                'copay_flg': 'Y' if row['copay_amt'] > 0 else None,
+                'copay_flg': 'Y' if row['copay_amt'] and float(row['copay_amt']) > 0 else None,
                 'census_match_cd': None,
                 'status_cd': None,
                 'charge_confirmed_flg': None,
