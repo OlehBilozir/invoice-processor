@@ -34,7 +34,6 @@ def validate_file(invoice_path, test_mode=False):
         log_file.close()
         return False, log_file_path, None
 
-    print (invoice_reader_settings.id, '='*10)
     # download invoice
     if not test_mode:
         file_name = 'invoice.xlsx'
