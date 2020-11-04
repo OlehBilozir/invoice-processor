@@ -1,5 +1,6 @@
 import math
 import datetime
+import traceback
 
 from openpyxl import load_workbook
 
@@ -33,6 +34,7 @@ def validate_file(invoice_path, test_mode=False):
         log_file.close()
         return False, log_file_path, None
 
+    print (invoice_reader_settings.id, '='*10)
     # download invoice
     if not test_mode:
         file_name = 'invoice.xlsx'
@@ -128,7 +130,7 @@ def process_invoice(invoice_info, log_path, test_mode=False):
     except Exception as e:
         session.rollback()
         result = False
-        print(str(e), file=log_file)
+        print(traceback.format_exc(), file=log_file)
     
     res = stop_batch_logging(invoice_batch_log_id)
     log_file.close()
@@ -183,7 +185,7 @@ def _process_row_specialty_rx_email(invoice_data, invoice_batch_log_id, pharmacy
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -235,7 +237,7 @@ def _process_row_specialty_rx_portal(invoice_data, invoice_batch_log_id, pharmac
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -286,7 +288,7 @@ def _process_row_pharmscripts_portal(invoice_data, invoice_batch_log_id, pharmac
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -300,7 +302,7 @@ def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy
         try:
             first_nm = get_first_name(row['patient'])
             last_nm = get_last_name(row['patient'])
-            payer_group_id = get_payer_group(pharmacy_id, row['inv_grp'], source)
+            payer_group_id = get_payer_group(pharmacy_id, row['invoice_grp'], source)
 
             record = {
                 'invoice_batch_id': invoice_batch_log_id,
@@ -338,7 +340,7 @@ def _process_row_pharmscripts_email(invoice_data, invoice_batch_log_id, pharmacy
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -391,7 +393,7 @@ def _process_row_geriscript_general(invoice_data, invoice_batch_log_id, pharmacy
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -443,7 +445,7 @@ def _process_row_medwiz_general(invoice_data, invoice_batch_log_id, pharmacy_id,
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -496,7 +498,7 @@ def _process_row_omnicare_general(invoice_data, invoice_batch_log_id, pharmacy_i
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -549,7 +551,7 @@ def _process_row_pharmerica_email(invoice_data, invoice_batch_log_id, pharmacy_i
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data
@@ -602,7 +604,7 @@ def _process_row_pharmerica_portal(invoice_data, invoice_batch_log_id, pharmacy_
 
             load_data.append(PharmacyInvoice(**record))
         except Exception as e:
-            print(str(e), file=log_file)
+            print(traceback.format_exc(), file=log_file)
             result = False
 
     return result, load_data

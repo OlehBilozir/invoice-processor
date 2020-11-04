@@ -127,13 +127,14 @@ def get_pharmacy(facility):
 
 
 def get_payer_group(pharmacy_id, inv_grp, source):
+    print(pharmacy_id, inv_grp, source, '&'*10) 
     payer_group = session.query(PayerGroupPharmacyMap).filter(
         PayerGroupPharmacyMap.pharmacy_id==pharmacy_id,
         or_(PayerGroupPharmacyMap.source==None, PayerGroupPharmacyMap.source==source),
         # or_(PayerGroupPharmacyMap.facility_group_id==None, PayerGroupPharmacyMap.facility_group_id==facility_group_id),
         or_(PayerGroupPharmacyMap.name==None, PayerGroupPharmacyMap.name==inv_grp)).first()
 
-    return payer_group.id
+    return payer_group.id if payer_group else None
 
 
 def get_reader_settings(pharmacy):
@@ -156,6 +157,7 @@ def validate_field(field, val):
     # val is not empty
     is_valid = True
     msg = ''
+    _val = None
 
     if field.field_type in ['int', 'long']:
         try:
@@ -174,8 +176,9 @@ def validate_field(field, val):
             is_valid = False
             msg = "Invalid decimal"
     elif field.field_type == 'date':
-        is_valid = dateparser.parse(val)
-        if not is_valid:
+        _val = dateparser.parse(val)
+        if not _val:
+            is_valid = False
             msg = "Invalid date"
 
     if field.field_validations:
@@ -223,7 +226,7 @@ def validate_field(field, val):
             if _msg:
                 msg = msg + ', ' + _msg if msg else _msg
 
-    return is_valid, msg
+    return is_valid, msg, _val or val
 
 
 def validate_row(invoice_fields, header, row, row_idx, log_file):
@@ -245,7 +248,7 @@ def validate_row(invoice_fields, header, row, row_idx, log_file):
                 # add column as long as it is not invalid
                 _row[field.field_name] = val                
         else:
-            _is_valid, msg = validate_field(field, val)
+            _is_valid, msg, val = validate_field(field, val)
 
             if _is_valid:
                 _row[field.field_name] = val
