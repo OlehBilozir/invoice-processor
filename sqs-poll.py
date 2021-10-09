@@ -11,8 +11,8 @@ MAX_QUEUE_MESSAGES = 1
 sqs = get_sqs_resource()
 queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
 
-from_email = os.getenv("FROM_EMAIL", 'LTC <it.corridor051@gmail.com>')
-to_email = os.getenv("TO_EMAIL", 'jason.5001001@gmail.com')
+from_email = os.getenv("FROM_EMAIL", 'LTC <reporter@ltc.com>')
+to_email = os.getenv("TO_EMAIL", 'info@ltc.com')
 
 TEST_MODE = True
 
